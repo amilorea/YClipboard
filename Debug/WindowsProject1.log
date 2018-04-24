@@ -1,3 +1,9 @@
-﻿  WindowsProject1.cpp
-c:\users\bao\source\repos\windowsproject1\windowsproject1\windowsproject1.cpp(309): warning C4715: 'KeyboardProc': not all control paths return a value
+﻿  clippiece.cpp
+  WindowsProject1.cpp
+c:\users\bao\source\repos\windowsproject1\windowsproject1\windowsproject1.cpp(141): warning C4101: 'verticalScroll': unreferenced local variable
+  clipslot.cpp
+  painter.cpp
+c:\users\bao\source\repos\windowsproject1\windowsproject1\painter.cpp(68): warning C4018: '<': signed/unsigned mismatch
+  Generating Code...
+c:\users\bao\source\repos\windowsproject1\windowsproject1\windowsproject1.cpp(364): warning C4715: 'KeyboardProc': not all control paths return a value
   WindowsProject1.vcxproj -> C:\Users\Bao\source\repos\WindowsProject1\Debug\YClipboard.exe

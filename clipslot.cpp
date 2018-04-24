@@ -1,13 +1,22 @@
 ﻿#include "stdafx.h"
 #include "clipslot.h"
 
+struct sortBySlot
+{
+	inline bool operator() (Clippiece* cl1, Clippiece* cl2)
+	{
+		return (cl1->getSlotInfo() < cl2->getSlotInfo());
+	}
+};
+
 Clipslot _clipVector;
 Clipslot::Clipslot()
 {
 	defaultSlot = CLIPSLOT_DEFAULTSLOT;
 	clippieceSlotVector.resize(10);
+	clippieceCount = 0;
 	for (int i = 0; i < 10; i++)
-		clippieceSlotVector[i] = NULL;
+		clippieceSlotVector.push_back(NULL);
 }
 
 Clipslot::~Clipslot()
@@ -29,36 +38,170 @@ Clipslot::~Clipslot()
 
 int Clipslot::addSlot(Clippiece *targetClippiece)
 {
-	int successSlot = -1;
-	for (int i = 0; i < CLIPSLOT_MAXSIZE; i++)	// Thử tìm vị trí hotkey còn trống và thêm clippiece này vào nếu có
-		if (clippieceSlotVector[i] == NULL) {
-			clippieceSlotVector[i] = clippieceVector.back();
-			clippieceVector.back()->setSlotInfo(i);
-			successSlot = i;
-			if (_debug) {
-				consoleOutput(_T("Successfully pushed to slot "), CONSOLE_NORMAL);
-				consoleOutput(successSlot, CONSOLE_NEWLINE);
+	try {
+		if (targetClippiece->getFormatCount() == 1)	// Format duy nhất mà clippiece này có sẽ là format CF_YCLIP
+			throw CLIPSLOT_ERROR_EMPTYCLIPPIECE;
+
+		int lastSlot = clippieceCount;				// Vị trí mặc định của clippiece mới thêm vào sẽ là ở cuối dãy
+		int successSlot = -1;
+
+		for (int i = 0; i < CLIPSLOT_MAXHOTKEYCOUNT; i++)	// Thử tìm vị trí hotkey còn trống và thêm clippiece này vào nếu có
+			if (clippieceSlotVector[i] == NULL) {
+				clippieceSlotVector[i] = targetClippiece;
+				successSlot = i;
+				targetClippiece->setSlotInfo(successSlot);
+				clippieceVector.push_back(NULL);
+				clippieceVector[successSlot] = targetClippiece;
+				if (_debug) {
+					consoleOutput(_T("Successfully pushed to slot "), CONSOLE_NORMAL);
+					consoleOutput(successSlot, CONSOLE_NEWLINE);
+				}
+				break;
 			}
+			else if (clippieceSlotVector[i]->getStatus() == CLIPPIECE_STATUS_READYTODISCARD) {
+				delete clippieceSlotVector[i];
+				clippieceSlotVector[i] = NULL;
+				clippieceSlotVector[i] = targetClippiece;
+				successSlot = i;
+				targetClippiece->setSlotInfo(successSlot);
+				clippieceVector[successSlot] = targetClippiece;
+				if (_debug) {
+					consoleOutput(_T("Successfully replaced slot "), CONSOLE_NORMAL);
+					consoleOutput(successSlot, CONSOLE_NEWLINE);
+				}
+				break;
+			}
+
+		if (successSlot == -1) {
+			// Nếu không thì thêm vào đuôi của mảng
+			if (_debug) {
+				consoleOutput(_T("Clipslot failed - Warning: No slot available"), CONSOLE_NEWLINE);
+			}
+			successSlot = lastSlot;
+			targetClippiece->setSlotInfo(successSlot);
+			clippieceVector.push_back(NULL);
+			clippieceVector[successSlot] = targetClippiece;
+		}
+
+		std::sort(clippieceVector.begin(), clippieceVector.end(), sortBySlot());
+		consoleOutput((int)_clipVector.getClippiece(successSlot)->getRemoveButton(), CONSOLE_NEWLINE);
+		consoleOutput((int)_clipVector.getClippiece(successSlot)->getSlotButton(), CONSOLE_NEWLINE);
+		clippieceCount++;
+		return successSlot;
+	}
+	catch (int error) {
+		switch(error) {
+		case CLIPSLOT_ERROR_EMPTYCLIPPIECE:
+			delete targetClippiece;
+			targetClippiece = NULL;
+			consoleOutput(_T("Clipslot failed - Error: No data in clippiece"), CONSOLE_NEWLINE);
 			break;
 		}
+		return -1;
+	}
+	return -1;
+}
 
-	if (successSlot == -1)
-		if (_debug) {
-			consoleOutput(_T("Clipslot failed - Warning: No slot available"), CONSOLE_NEWLINE);
+Clippiece * Clipslot::getClippiece(DWORD selectedSlot)
+{
+	try {
+		consoleOutput(_T("Attempt to retreive"), CONSOLE_SPACE);
+		consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+		if (selectedSlot < 0
+		|| selectedSlot >= clippieceVector.size())
+			throw CLIPSLOT_ERROR_NOCLIPPIECE;
+
+		if (clippieceVector[selectedSlot]->getStatus() == CLIPPIECE_STATUS_READYTODISCARD)
+			throw CLIPSLOT_ERROR_EMPTYCLIPPIECE;
+
+		return clippieceVector[selectedSlot];
+	}
+	catch (int error) {
+		switch (error) {
+		case CLIPSLOT_ERROR_NOCLIPPIECE:
+			consoleOutput(_T("Get clippiece failed - Error: No clippiece at slot"), CONSOLE_SPACE);
+			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			break;
+		case CLIPSLOT_ERROR_EMPTYCLIPPIECE:
+			consoleOutput(_T("Get clippiece failed - Error: Empty clippiece at slot"), CONSOLE_SPACE);
+			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			break;
+		}
+		return NULL;
+	}
+	return NULL;
+}
+
+Clippiece * Clipslot::getLastClippiece()
+{
+	return clippieceVector.back();
+}
+
+void Clipslot::setLastClippiece(Clippiece* targetClippiece)
+{
+	// Cẩn thận! Phần tử bị thay thế sẽ KHÔNG bị hủy tự động
+	clippieceVector[clippieceVector.size() - 1] = targetClippiece;
+}
+
+void Clipslot::removeClippiece(DWORD selectedSlot)
+{
+	Clippiece *clippieceToRemove = getClippiece(selectedSlot);
+	try {
+		if (clippieceToRemove == NULL)
+			throw CLIPSLOT_ERROR_NOCLIPPIECE;
+
+		if (clippieceToRemove->getStatus() == CLIPPIECE_STATUS_READYTODISCARD)
+			throw CLIPSLOT_ERROR_NOCLIPPIECE;
+
+		if (0 <= selectedSlot && selectedSlot <= 9) {
+			// Nếu xóa một clippiece đang được gắn hotkey
+			clippieceToRemove->setStatus(CLIPPIECE_STATUS_READYTODISCARD);
+			// Loại bỏ hoàn toàn dữ liệu của Clippiece này
+			clippieceToRemove->destroyData();
+			clippieceToRemove->removeAllButton();
+			// Việc này thay đổi số lượng phần tử hữu dụng
+			clippieceCount -= 1;
+			throw CLIPSLOT_DISCARD;
 		}
 
-	return successSlot;
+		// Kỹ thuật xóa: Đổi chỗ dữ liệu ở vị trí bị xóa với phần tử cuối cùng của kho chứa
+		clippieceVector[selectedSlot] = getLastClippiece();
+		setLastClippiece(clippieceToRemove);
+
+		// Việc này thay đổi số lượng phần tử hữu dụng
+		clippieceCount -= 1;
+
+		// thay đổi vị trí của phần tử vừa được đem vào thế cho phần tử bị xóa
+		clippieceToRemove = clippieceVector[selectedSlot];
+		clippieceToRemove->setSlotInfo(selectedSlot);
+
+		// sau đó loại bỏ phần tử cuối cùng với độ phức tạp O(1)
+		consoleOutput(_T("Ready to pop"), CONSOLE_NEWLINE);
+		clippieceVector.pop_back();
+
+		clippieceToRemove = NULL;
+	}
+	catch (int error) {
+		clippieceToRemove = NULL;
+		switch (error) {
+		case CLIPSLOT_DISCARD:
+			consoleOutput(_T("Remove clippiece - Instead discard clippiece at slot"), CONSOLE_SPACE);
+			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			break;
+		case CLIPSLOT_ERROR_NOCLIPPIECE:
+			consoleOutput(_T("Remove clippiece failed - Error: No clippiece to remove at slot"), CONSOLE_SPACE);
+			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			break;
+		}
+	}
 }
 
 bool Clipslot::triggerClippieceSlot(DWORD selectedSlot)
 {
-	Clippiece *targetClippiece = clippieceSlotVector[selectedSlot];
+	Clippiece *targetClippiece = getClippiece(selectedSlot);
 	try {
 		if (targetClippiece == NULL)
 			throw CLIPSLOT_ERROR_EMPTYSLOT;
-
-		if (targetClippiece->getFormatCount() == 1)	// Format duy nhất mà clippiece này có là format CF_YCLIP
-			throw CLIPSLOT_ERROR_EMPTYCLIPPIECE;
 
 		if (_debug) {
 			consoleOutput(_T("Now trigger clippiece at slot "), CONSOLE_NORMAL);
@@ -71,18 +214,12 @@ bool Clipslot::triggerClippieceSlot(DWORD selectedSlot)
 		case CLIPSLOT_ERROR_EMPTYSLOT:
 			consoleOutput(_T("Clipslot trigger failed - Error: Unoccupied slot"), CONSOLE_NEWLINE);
 			break;
-		case CLIPSLOT_ERROR_EMPTYCLIPPIECE:
-			delete targetClippiece;
-			clippieceSlotVector[selectedSlot] = NULL;
-			targetClippiece = NULL;
-			consoleOutput(_T("Clipslot failed - Error: No data in clippiece"), CONSOLE_NEWLINE);
-			break;
 		}
 	}
 	return false;
 }
 
-bool Clipslot::createClippieceForCurrentClipboard()
+int Clipslot::createClippieceForCurrentClipboard()
 {
 	/* ATTENTION: Thread? */
 	try {
@@ -92,9 +229,7 @@ bool Clipslot::createClippieceForCurrentClipboard()
 		if (GetClipboardData(Manager::CF_YCLIP) != NULL)
 			throw YCLIP_ERROR_RECURSIVE;
 
-		//Clippiece *cl = new Clippiece();
-		clippieceVector.push_back(new Clippiece());
-		Clippiece *clp = clippieceVector.back();
+		Clippiece *clp = new Clippiece();
 		if (clp == NULL)
 			throw CLIPPIECE_ERROR_INITFAIL;
 
@@ -190,12 +325,13 @@ bool Clipslot::createClippieceForCurrentClipboard()
 
 			uFormat = EnumClipboardFormats(uFormat);	// Lấy format tiếp theo
 		}
+		CloseClipboard();			// Luôn luôn đóng clipboard
 
+		// Thêm mô tả
 		clp->setDes(des);
 		clp->setFullDes(desFull);
 
-		CloseClipboard();			// Luôn luôn đóng clipboard
-		addSlot(clp);
+		return addSlot(clp);
 	}
 	catch (int error) {
 		switch (error) {
@@ -211,7 +347,12 @@ bool Clipslot::createClippieceForCurrentClipboard()
 		}
 		CloseClipboard();
 		// To-Do: Destroy the newborn clippiece here
-		return false;
+		return -1;
 	}
-	return true;
+	return -1;
+}
+
+int Clipslot::size()
+{
+	return clippieceCount;
 }

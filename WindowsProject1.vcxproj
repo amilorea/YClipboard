@@ -147,6 +147,7 @@
     <ClInclude Include="clippiece.h" />
     <ClInclude Include="clipslot.h" />
     <ClInclude Include="control.h" />
+    <ClInclude Include="painter.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -159,6 +160,7 @@
     </ClCompile>
     <ClCompile Include="clipslot.cpp" />
     <ClCompile Include="control.cpp" />
+    <ClCompile Include="painter.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
