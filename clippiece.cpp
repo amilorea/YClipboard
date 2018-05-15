@@ -5,16 +5,28 @@
 Clippiece::Clippiece()
 {
 	slotOccupied = CLIPPIECE_NOSLOT;
-	status = CLIPPIECE_STATUS_READYTOUSE;
+	status = CLIPPIECE_STATUS_READY_TO_USE;
+	removeButton = NULL;
+	slotButton = NULL;
+	copyButton = NULL;
+}
+
+Clippiece::Clippiece(std::basic_string<wchar_t> des)
+{
+	slotOccupied = CLIPPIECE_NOSLOT;
+	status = CLIPPIECE_STATUS_READY_TO_USE;
+	setFullDes(des);
+	des.resize(min(CLIPPIECE_DEFAULT_DESCRIPTION_SIZE, des.size()));
+	setDes(des);
 	removeButton = NULL;
 	slotButton = NULL;
 }
 
 Clippiece::~Clippiece()
 {
-	if (_debug) {
-		consoleOutput(_T("Destroying clippiece"), CONSOLE_NEWLINE);
-	}
+	consoleOutput(_T("Destroying clippiece at position"), CONSOLE_SPACE);
+	consoleOutput(getPosition(), CONSOLE_NEWLINE);
+
 	destroyData();
 	removeAllButton();
 	std::map<UINT, HGLOBAL>::iterator it = dataMap.find(Manager::CF_YCLIP);
@@ -24,14 +36,9 @@ Clippiece::~Clippiece()
 	dataMap.clear();
 }
 
-Clippiece::Clippiece(std::basic_string<WCHAR> des)
-{
-	slotOccupied = CLIPPIECE_NOSLOT;
-	setFullDes(des);
-	setDes(des);
-}
-
 void Clippiece::destroyData() {
+	des.clear();
+	desFull.clear();
 	for (std::map<UINT, HGLOBAL>::const_iterator it = dataMap.cbegin(); it != dataMap.cend();) {
 		// Phá hủy tất cả dữ liệu trừ CF_YCLIP để chặn việc thêm Clippiece đệ quy
 		if (it->second != NULL && it->second != NULL && it->first != Manager::CF_YCLIP) {
@@ -40,9 +47,8 @@ void Clippiece::destroyData() {
 		}
 		else it++;
 	}
-	if (_debug) {
-		consoleOutput(_T("Successfully destroy data"), CONSOLE_NEWLINE);
-	}
+	
+	consoleOutput(_T("Successfully destroyed data"), CONSOLE_NEWLINE);
 }
 
 void Clippiece::removeAllButton()
@@ -55,63 +61,76 @@ void Clippiece::removeAllButton()
 		DestroyWindow(slotButton);
 		slotButton = NULL;
 	}
-	if (_debug) {
-		consoleOutput(_T("Successfully remove buttons"), CONSOLE_NEWLINE);
+	if (copyButton != NULL) {
+		DestroyWindow(copyButton);
+		copyButton = NULL;
 	}
+	
+	consoleOutput(_T("Successfully removed buttons"), CONSOLE_NEWLINE);
 }
 
-void Clippiece::setDes(std::basic_string<WCHAR> des)
+void Clippiece::setDes(std::basic_string<wchar_t> des)
 {
+	des.resize(min(CLIPPIECE_DEFAULT_DESCRIPTION_SIZE, des.size()));
 	this->des = des;
-	if (_debug) {
-		consoleOutput(_T("Des set"), CONSOLE_NEWLINE);
-	}
+
+	consoleOutput(_T("Description set"), CONSOLE_NEWLINE);
 }
 
-std::basic_string<WCHAR> Clippiece::getDes()
+std::basic_string<wchar_t> Clippiece::getDes()
 {
 	return des;
 }
 
-void Clippiece::setFullDes(std::basic_string<WCHAR> des)
+void Clippiece::setFullDes(std::basic_string<wchar_t> des)
 {
 	desFull = des;
-	if (_debug) {
-		consoleOutput(_T("DesFull set"), CONSOLE_NEWLINE);
-	}
+	
+	consoleOutput(_T("Full Description set"), CONSOLE_NEWLINE);
 }
 
-std::basic_string<WCHAR> Clippiece::getFullDes()
+std::basic_string<wchar_t> Clippiece::getFullDes()
 {
 	return desFull;
 }
 
-void Clippiece::setSlotInfo(int slot)
+void Clippiece::setPosition(int slot, bool isAffectHotkey)
 {
 	slotOccupied = slot;
-
 	// Thay đổi nút xóa
 	HWND tempRemoveButton = getRemoveButton();
 	if (tempRemoveButton != NULL) {
-		SetMenu(tempRemoveButton, (HMENU)(0xFF + slot * 2));
+		// Hàm SetWindowLongPtr dùng thay đổi định danh của nút bấm, dùng cho cửa sổ con
+		SetWindowLongPtr(tempRemoveButton, GWLP_ID, (0xFF + slot * BUTTON_SKIP_RANGE + REMOVE_BUTTON));
 	}
-	tempRemoveButton = NULL;
 
-	// Thay đổi nút hotkey
+	// Thay đổi nút chuyển hotkey
 	HWND tempSlotButton = getSlotButton();
 	if (tempSlotButton != NULL) {
-		SetMenu(tempSlotButton, (HMENU)(0xFF + slot * 2 + 1));
-		if (0 <= slot && slot <= 9) {
-			std::basic_string<WCHAR> buttonText;
+		SetWindowLongPtr(tempSlotButton, GWLP_ID, (0xFF + slot * BUTTON_SKIP_RANGE + CHANGE_SLOT_BUTTON));
+		std::basic_string<wchar_t> buttonText;
+		if (isAffectHotkey) {
 			buttonText.append(_T("Ctrl "));
 			buttonText.push_back(slot + '0');
-			SendMessage(tempSlotButton, WM_SETTEXT, 0, (LPARAM)buttonText.c_str());
 		}
+		else {
+			buttonText.append(_T("Hotkey"));
+		}
+		SendMessage(tempSlotButton, WM_SETTEXT, 0, (LPARAM)buttonText.c_str());
 	}
-	tempSlotButton = NULL;
+
+	// Thay đổi nút xóa
+	HWND tempCopyButton = getShareButton();
+	if (tempCopyButton != NULL) {
+		// Hàm SetWindowLongPtr dùng thay đổi định danh của nút bấm, dùng cho cửa sổ con
+		SetWindowLongPtr(tempCopyButton, GWLP_ID, (0xFF + slot * BUTTON_SKIP_RANGE + SHARE_BUTTON));
+	}
+	
+	consoleOutput(_T("Succesfully set slot to"), CONSOLE_SPACE);
+	consoleOutput(getPosition(), CONSOLE_NEWLINE);
 }
 
-int Clippiece::getSlotInfo()
+int Clippiece::getPosition()
 {
 	return slotOccupied;
 }
@@ -128,9 +147,7 @@ int Clippiece::getStatus()
 
 void Clippiece::setRemoveButton(HWND button)
 {
-	consoleOutput((int)button, CONSOLE_NEWLINE);
 	removeButton = button;
-	consoleOutput((int)removeButton, CONSOLE_NEWLINE);
 }
 
 HWND Clippiece::getRemoveButton()
@@ -140,9 +157,7 @@ HWND Clippiece::getRemoveButton()
 
 void Clippiece::setSlotButton(HWND button)
 {
-	consoleOutput((int)button, CONSOLE_NEWLINE);
 	slotButton = button;
-	consoleOutput((int)slotButton, CONSOLE_NEWLINE);
 }
 
 HWND Clippiece::getSlotButton()
@@ -150,31 +165,44 @@ HWND Clippiece::getSlotButton()
 	return slotButton;
 }
 
+void Clippiece::setShareButton(HWND button)
+{
+	copyButton = button;
+}
+
+HWND Clippiece::getShareButton()
+{
+	return copyButton;
+}
+
 bool Clippiece::insertData(UINT format, HGLOBAL handle)
 {
 	try {
 		if (handle == NULL)
-			throw CLIPPIECE_ERROR_NOHANDLE;
+			throw CLIPPIECE_ERROR_NO_HANDLE;
+
 		if (format < 0)
-			throw CLIPPIECE_ERROR_NOFORMAT;
+			throw CLIPPIECE_ERROR_NO_FORMAT;
 
 		dataMap.insert(std::pair<UINT, HGLOBAL>(format, handle));
-		if (_debug) {
-			consoleOutput(_T("Clippiece insert succeed with format "), CONSOLE_NORMAL);
-			consoleOutput(format, CONSOLE_NEWLINE);
-		}
+
+		consoleOutput(_T("Clippiece insert succeed with format "), CONSOLE_NORMAL);
+		consoleOutput(format, CONSOLE_NEWLINE);
+
+		return true;
 	}
 	catch (int error) {
 		switch (error) {
-		case CLIPPIECE_ERROR_NOHANDLE:
+		case CLIPPIECE_ERROR_NO_HANDLE:
 			consoleOutput(_T("Clippiece insert failed - Error: Data handle is NULL "), CONSOLE_NEWLINE);
-			return false;
-		case CLIPPIECE_ERROR_NOFORMAT:
+			break;
+		case CLIPPIECE_ERROR_NO_FORMAT:
 			consoleOutput(_T("Clippiece insert failed - Error: No such format"), CONSOLE_NEWLINE);
-			return false;
+			break;
 		}
+		return false;
 	}
-	return true;
+	return false;
 }
 
 //void Clippiece::display()
@@ -184,7 +212,7 @@ bool Clippiece::insertData(UINT format, HGLOBAL handle)
 //		consoleOutput(this->slot, 1);
 //		consoleOutput(des.c_str(), 1);
 //		consoleOutput(desFull.c_str(), 1);
-//		WCHAR szFormatName[100];						// Tên của format
+//		wchar_t szFormatName[100];						// Tên của format
 //		HGLOBAL hContentLock = NULL;
 //		for (std::map<UINT, HGLOBAL>::iterator it = m.begin(); it != m.end(); it++) {
 //			consoleOutput(_T("["), 0);
@@ -225,12 +253,12 @@ bool Clippiece::insertData(UINT format, HGLOBAL handle)
 //	}
 //}
 
-bool Clippiece::checkFormatAvailable(UINT format)
+bool Clippiece::isFormatAvailable(UINT format)
 {
 	return dataMap.find(format) != dataMap.end();
 }
 
-int Clippiece::getFormatCount()
+int Clippiece::countFormat()
 {
 	return dataMap.size();
 }
@@ -262,28 +290,30 @@ int Clippiece::getFormatCount()
 bool Clippiece::injectAll()
 {
 	try {
-		if (_debug) {
-			consoleOutput(_T("Attempt to set clipboard data from slot "), CONSOLE_NORMAL);
-			consoleOutput(slotOccupied, 1);
-		}
+		consoleOutput(_T("Attempting to set clipboard data from slot "), CONSOLE_NORMAL);
+		consoleOutput(slotOccupied, 1);
 
 		if (!OpenClipboard(Manager::globalhWnd))
-			throw CLIPBOARD_ERROR_NOTOPEN;
+			throw CLIPBOARD_ERROR_NOT_OPEN;
 		
-		EmptyClipboard();		// Gọi hàm Emptyclipboard còn lấy quyền sở hữu clipboard về cho chương trình
+		EmptyClipboard();		// Gọi hàm Emptyclipboard sẽ lấy quyền sở hữu clipboard về cho chương trình
 		for (std::map<UINT, HGLOBAL>::iterator it = dataMap.begin(); it != dataMap.end(); it++) {
+			UINT format = it->first;
 			HGLOBAL hTemp = it->second;
 			if (hTemp == NULL) {
-				if (_debug){
-					consoleOutput(_T("Clippiece inject - Warning: No handle available at format "), CONSOLE_NORMAL);
-					consoleOutput(it->first, CONSOLE_NEWLINE);
-				}
+				consoleOutput(_T("Clippiece inject - Warning: No handle available at format "), CONSOLE_NORMAL);
+				consoleOutput(format, CONSOLE_NEWLINE);
+
 				continue;
 			}
 
 			// Clipboard lấy quyền sở hữu của dữ liệu sau khi nhận và có thể sẽ xóa các dữ liệu này nếu cần
 			// Do đó ta không gửi trực tiếp dữ liệu từ clippiece, mà chỉ gửi một bản sao của nó
 			SIZE_T dataSize = GlobalSize(hTemp);
+
+			consoleOutput(_T("Clippiece inject - Data size:"), CONSOLE_SPACE);
+			consoleOutput(dataSize, CONSOLE_NEWLINE);
+
 			HGLOBAL hDataCopy = GlobalAlloc(GPTR, dataSize);
 			HGLOBAL hDataLock;
 			try {
@@ -295,6 +325,7 @@ bool Clippiece::injectAll()
 					throw GLOBALLOCK_FAILED;
 
 				memcpy(hDataCopy, hDataLock, dataSize);
+
 				GlobalUnlock(hTemp);
 				SetClipboardData(it->first, hDataCopy);
 			}
@@ -315,63 +346,71 @@ bool Clippiece::injectAll()
 			}
 		}
 		CloseClipboard();
+
+		return true;
 	}
 	catch (int error) {
 		switch (error) {
-		case CLIPBOARD_ERROR_NOTOPEN:
+		case CLIPBOARD_ERROR_NOT_OPEN:
 			consoleOutput(_T("Clippiece inject failed - Error: Unable to open clipboard"), CONSOLE_NEWLINE);
 			return false;
 		}
 	}
-	return true;
+	return false;
 }
 
-bool setFileDescription(std::basic_string<WCHAR> &des, std::basic_string<WCHAR> &desFull)
+bool setFileDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar_t> &desFull)
 {
 	HANDLE hFileContent = (HANDLE)GetClipboardData(CF_HDROP);
 	HDROP hFileLock = NULL;
-	UINT fileCount = 0;
-	bool firstChance = true;
+	UINT totalFile = 0;
+	bool firstOccur = true;
 	try {
 		if (hFileContent == NULL)
-			throw CLIPBOARD_ERROR_DATANOTFOUND;
+			throw CLIPBOARD_ERROR_DATA_NOT_FOUND;
 
 		hFileLock = (HDROP)GlobalLock(hFileContent);
 		if (hFileLock == NULL)
 			throw GLOBALLOCK_FAILED;
 
-		fileCount = DragQueryFile(hFileLock, 0xFFFFFFFF, nullptr, 0);	// Cú pháp đặc trưng của DragQueryFile dùng lấy số tệp
+		totalFile = DragQueryFile(hFileLock, 0xFFFFFFFF, nullptr, 0);	// Cú pháp đặc trưng của DragQueryFile dùng lấy số tệp
 
-		if (fileCount == 0)
-			throw FORMAT_ERROR_NOFILE;
+		if (totalFile == 0)
+			throw FORMAT_ERROR_NO_FILE;
 
-		desFull.append(std::to_wstring(fileCount));
+		desFull.append(std::to_wstring(totalFile));
 		desFull.append(_T(" tệp / thư mục: "));
 
-		des.append(std::to_wstring(fileCount));
+		des.append(std::to_wstring(totalFile));
 		des.append(_T(" tệp / thư mục:"));
 
-		for (DWORD i = 0; i < fileCount; i++) {
-			std::basic_string<WCHAR> fileName;
-			UINT fnLength = DragQueryFile(hFileLock, i, nullptr, 0);	// Cú pháp lấy độ dài tên tệp
-			fileName.resize(fnLength + 1);								// Tính thêm ký tự \0 kết thúc xâu
-			DragQueryFile(hFileLock, i, &(fileName[0]), fnLength + 1);	// Cú pháp ghi lại tên tệp
+		for (DWORD fileCounter = 0; fileCounter < totalFile; fileCounter++) {
+			std::basic_string<wchar_t> fileName;
+			UINT fileNameLength = DragQueryFile(hFileLock, fileCounter, nullptr, 0);	// Cú pháp lấy độ dài tên tệp
+			fileName.resize(fileNameLength + 1);										// Tính thêm ký tự \0 kết thúc xâu
+			DragQueryFile(hFileLock, fileCounter, &(fileName[0]), fileNameLength + 1);	// Cú pháp ghi lại tên tệp
 
 			desFull.append(_T("\n\t"));
 			desFull.append(fileName.c_str());
 
-			if (firstChance) {
+			if (firstOccur) {
 				des.append(_T(" "));
-				firstChance = false;
+				firstOccur = false;
 			} else des.append(_T(", "));
 			des.append(fileName.substr(fileName.find_last_of('\\') + 1).c_str());
 		}
 
 		GlobalUnlock(hFileLock);
+
+		consoleOutput(_T("Description by CF_HDROP sucessfully created"), CONSOLE_NEWLINE);
+		consoleOutput(des.c_str(), CONSOLE_NEWLINE);
+		consoleOutput(desFull.c_str(), CONSOLE_NEWLINE);
+
+		return true;
 	}
 	catch (int error) {
 		switch (error) {
-		case CLIPBOARD_ERROR_DATANOTFOUND:
+		case CLIPBOARD_ERROR_DATA_NOT_FOUND:
 			consoleOutput(_T("Clippiece create description by CF_HDROP - Error: Data not found"), CONSOLE_NEWLINE);
 			break;
 		case GLOBALLOCK_FAILED:
@@ -379,7 +418,7 @@ bool setFileDescription(std::basic_string<WCHAR> &des, std::basic_string<WCHAR> 
 			if (hFileLock)
 				GlobalUnlock(hFileContent);
 			break;
-		case FORMAT_ERROR_NOFILE:
+		case FORMAT_ERROR_NO_FILE:
 			consoleOutput(_T("Clippiece create description by CF_HDROP - Error: No file found"), CONSOLE_NEWLINE);
 			if (hFileLock)
 				GlobalUnlock(hFileContent);
@@ -387,89 +426,85 @@ bool setFileDescription(std::basic_string<WCHAR> &des, std::basic_string<WCHAR> 
 		}
 		return false;
 	}
-	if (_debug) {
-		consoleOutput(_T("Description sucessfully created"), CONSOLE_NEWLINE);
-		consoleOutput(des.c_str(), CONSOLE_NEWLINE);
-		consoleOutput(desFull.c_str(), CONSOLE_NEWLINE);
-	}
-	return true;
+	return false;
 }
 
-bool setTextDescription(std::basic_string<WCHAR> &des, std::basic_string<WCHAR> &desFull)
+bool setTextDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar_t> &desFull)
 {
 	if (des.length() > 0)				// Thẩm mỹ: Thêm một lần xuống dòng để phân cách các lần thêm mô tả
 		des.append(_T("\n"));
+
 	if (desFull.length() > 0)
 		desFull.append(_T("\n"));
 
-	bool isUsingCF_UNICODETEXT = true;
-	HANDLE hFileContent = (HANDLE)GetClipboardData(CF_UNICODETEXT);		// Ưu tiên CF_UNICODETEXT hơn CF_TEXT
-	if (hFileContent == NULL) {
-		hFileContent = (HANDLE)GetClipboardData(CF_TEXT);
-		isUsingCF_UNICODETEXT = false;
-		if (_debug) {
-			consoleOutput(_T("CF_UNICODETEXT format not found, fall back to CF_TEXT"), CONSOLE_NEWLINE);
-		}
+	bool isCF_UNICODETEXTAvailable = true;
+	HANDLE textContent = (HANDLE)GetClipboardData(CF_UNICODETEXT);		// Ưu tiên CF_UNICODETEXT hơn CF_TEXT
+	if (textContent == NULL) {
+		textContent = (HANDLE)GetClipboardData(CF_TEXT);
+		isCF_UNICODETEXTAvailable = false;
+		
+		consoleOutput(_T("CF_UNICODETEXT format not found, fall back to CF_TEXT"), CONSOLE_NEWLINE);
 	}
 
 	char *buffer = NULL;
-	WCHAR *wbuffer = NULL;
+	wchar_t *wbuffer = NULL;
 	try {
-		if (hFileContent == NULL)
-			throw CLIPBOARD_ERROR_DATANOTFOUND;
+		if (textContent == NULL)
+			throw CLIPBOARD_ERROR_DATA_NOT_FOUND;
 
-		if (isUsingCF_UNICODETEXT) {
-			wbuffer = (WCHAR*)GlobalLock(hFileContent);
+		if (isCF_UNICODETEXTAvailable) {
+			wbuffer = (wchar_t*)GlobalLock(textContent);
 			if (wbuffer == NULL)
 				throw GLOBALLOCK_FAILED;
 
-			std::basic_string<WCHAR> tempWString(wbuffer);
+			std::basic_string<wchar_t> tempWString(wbuffer);
 
 			des.append(tempWString);
 			desFull.append(tempWString);
 		}
 		else {
-			buffer = (char*)GlobalLock(hFileContent);
+			buffer = (char*)GlobalLock(textContent);
 			if (buffer == NULL)
 				throw GLOBALLOCK_FAILED;
 
 			std::basic_string<char> tempString(buffer);
-			std::basic_string<WCHAR> tempWString;
+			std::basic_string<wchar_t> tempWString;
 			tempWString.resize(tempString.length());
 			std::copy(tempString.begin(), tempString.end(), tempWString.begin());	// Chuyển xâu từ char thành wchar
-
+			
 			des.append(tempWString);
 			desFull.append(tempWString);
 		}
 
-		GlobalUnlock(hFileContent);
+		GlobalUnlock(textContent);
+
+		consoleOutput(_T("Description by CF_TEXT sucessfully created"), CONSOLE_NEWLINE);
+		consoleOutput(des.c_str(), CONSOLE_NEWLINE);
+		consoleOutput(desFull.c_str(), CONSOLE_NEWLINE);
+
+		return true;
 	}
 	catch (int error) {
 		switch (error) {
-		case CLIPBOARD_ERROR_DATANOTFOUND:
+		case CLIPBOARD_ERROR_DATA_NOT_FOUND:
 			consoleOutput(_T("Clippiece create description by CF_TEXT - Error: Data not found"), CONSOLE_NEWLINE);
 			break;
 		case GLOBALLOCK_FAILED:
 			consoleOutput(_T("Clippiece create description by CF_TEXT - Error: Unable to lock data"), CONSOLE_NEWLINE);
 			if (buffer || wbuffer)
-				GlobalUnlock(hFileContent);
+				GlobalUnlock(textContent);
 			break;
 		}
 		return false;
 	}
-	if (_debug) {
-		consoleOutput(_T("Description sucessfully created"), CONSOLE_NEWLINE);
-		consoleOutput(des.c_str(), CONSOLE_NEWLINE);
-		consoleOutput(desFull.c_str(), CONSOLE_NEWLINE);
-	}
-	return true;
+	return false;
 }
 
-bool setNoneDescription(std::basic_string<WCHAR> &des, std::basic_string<WCHAR> &desFull)
+bool setNoneDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar_t> &desFull)
 {
 	if (des.length() == 0)				// Khi tất cả các hàm tạo mô tả khác đều thất bại
 		des.append(_T("Không có bản xem trước"));
 	if (desFull.length() == 0)
 		desFull.append(_T("Không có bản xem trước đầy đủ"));
-	return false;
+	return true;
 }
