@@ -1,2 +1,9 @@
-﻿  clipslot.cpp
+﻿  WindowsProject1.cpp
+  clipslot.cpp
+  painter.cpp
+c:\users\bao\source\repos\windowsproject1\windowsproject1\painter.cpp(236): warning C4018: '<': signed/unsigned mismatch
+  Generating Code...
+c:\users\bao\source\repos\windowsproject1\windowsproject1\windowsproject1.cpp(423): warning C4715: 'KeyboardProc': not all control paths return a value
+  clippiece.cpp
+c:\users\bao\source\repos\windowsproject1\windowsproject1\clippiece.cpp(555): warning C4101: 'bmpScreen': unreferenced local variable
   WindowsProject1.vcxproj -> C:\Users\Bao\source\repos\WindowsProject1\Debug\YClipboard.exe

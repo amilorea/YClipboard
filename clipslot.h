@@ -23,10 +23,6 @@ private:
 	DWORD requestClippiecePosition;
 
 	int addToClipslot(Clippiece*, DWORD position = CLIPSLOT_DEFAULT_POSITION);	// Hàm can thiệp trực tiếp vào kho chứa
-
-	// Hàm xử lý
-	void copyBitmapInfo(PBITMAPINFO source, PBITMAPINFO destination);
-	DWORD colorCalculate(WORD bitCount, DWORD colorUsed, DWORD compression);
 public:
 	Clipslot();
 	~Clipslot();

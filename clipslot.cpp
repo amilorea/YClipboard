@@ -12,45 +12,6 @@ struct sortBySlot
 	}
 };
 
-void Clipslot::copyBitmapInfo(PBITMAPINFO source, PBITMAPINFO destination)
-{
-	destination->bmiHeader.biSize = source->bmiHeader.biSize;
-	destination->bmiHeader.biWidth = source->bmiHeader.biWidth;
-	destination->bmiHeader.biHeight = source->bmiHeader.biHeight;
-	destination->bmiHeader.biPlanes = source->bmiHeader.biPlanes;
-	destination->bmiHeader.biBitCount = source->bmiHeader.biBitCount;
-	destination->bmiHeader.biCompression = source->bmiHeader.biCompression;
-	destination->bmiHeader.biSizeImage = source->bmiHeader.biSizeImage;
-	destination->bmiHeader.biXPelsPerMeter = source->bmiHeader.biXPelsPerMeter;
-	destination->bmiHeader.biYPelsPerMeter = source->bmiHeader.biYPelsPerMeter;
-	destination->bmiHeader.biClrUsed = source->bmiHeader.biClrUsed;
-	destination->bmiHeader.biClrImportant = source->bmiHeader.biClrImportant;
-}
-
-DWORD Clipslot::colorCalculate(WORD bitCount, DWORD colorUsed, DWORD compression)
-{
-	DWORD colorCount = 0;
-	switch (bitCount) {
-	case 0:
-		throw CLIPPIECE_ERROR_UNSUPPORTED_FORMAT;
-	case 1:
-		colorCount = 2;
-		break;
-	case 4:
-	case 8:
-		colorCount = colorUsed;
-		break;
-	case 16:
-	case 24:
-	case 32:
-		if (compression != BI_RGB)
-			throw CLIPPIECE_ERROR_UNSUPPORTED_FORMAT;
-		colorCount = 0;
-		break;
-	}
-	return colorCount;
-}
-
 Clipslot::Clipslot()
 {
 	defaultSlot = CLIPSLOT_DEFAULT_POSITION;
@@ -350,14 +311,6 @@ int Clipslot::createClippieceFromCurrentClipboard()
 			throw ALLOCATION_FAILED;
 		clp->insertData(Manager::CF_YCLIP, yclipData);
 
-		std::basic_string<wchar_t> des;
-		std::basic_string<wchar_t> desFull;
-		// Tạo ra mục mô tả
-		setFileDescription(des, desFull);
-		setTextDescription(des, desFull);
-		//setImageDescription(des, desFull);
-		setNoneDescription(des, desFull);
-
 		UINT uFormat = EnumClipboardFormats(0);		// Lấy format khả dụng đầu tiên trong clipboard
 		HANDLE hContent;
 		while (uFormat) {
@@ -391,16 +344,7 @@ int Clipslot::createClippieceFromCurrentClipboard()
 					} break;
 					case CF_DIBV5: {
 						PBITMAPV5HEADER bitmapInfo = (PBITMAPV5HEADER)hContent;
-						int infoSize = bitmapInfo->bV5Size;
-						int infoBitCount = bitmapInfo->bV5BitCount;
-						DWORD colorCount = colorCalculate(infoBitCount,
-							bitmapInfo->bV5ClrUsed,
-							bitmapInfo->bV5Compression);
-
-						DWORD bmSize = bitmapInfo->bV5SizeImage;
-						if (bmSize == 0)
-							bmSize = bitmapInfo->bV5Height * bitmapInfo->bV5Width * bitmapInfo->bV5BitCount;
-						bmSize += sizeof(PBITMAPV5HEADER) + sizeof(RGBQUAD) * colorCount;
+						DWORD bmSize = bitmapSizeCalculateV5(bitmapInfo);
 
 						hContentCopy = GlobalAlloc(GPTR, bmSize);
 						if (hContentCopy == NULL)
@@ -410,16 +354,7 @@ int Clipslot::createClippieceFromCurrentClipboard()
 					} break;
 					case CF_DIB: {
 						PBITMAPINFO bitmapInfo = (PBITMAPINFO)hContent;
-						int infoSize = bitmapInfo->bmiHeader.biSize;
-						int infoBitCount = bitmapInfo->bmiHeader.biBitCount;
-						DWORD colorCount = colorCalculate(infoBitCount,
-							bitmapInfo->bmiHeader.biClrUsed,
-							bitmapInfo->bmiHeader.biCompression);
-
-						DWORD bmSize = bitmapInfo->bmiHeader.biSizeImage;
-						if (bmSize == 0)
-							bmSize = bitmapInfo->bmiHeader.biHeight * bitmapInfo->bmiHeader.biWidth * bitmapInfo->bmiHeader.biBitCount;
-						bmSize += sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * colorCount;
+						DWORD bmSize = bitmapSizeCalculate(bitmapInfo);
 
 						hContentCopy = GlobalAlloc(GPTR, bmSize);
 						if (hContentCopy == NULL)
@@ -461,7 +396,7 @@ int Clipslot::createClippieceFromCurrentClipboard()
 				case ALLOCATION_FAILED:
 					consoleOutput(_T("Clipboard change event - Error: Allocation data failed"), CONSOLE_NEWLINE);
 					break;
-				case CLIPPIECE_ERROR_UNSUPPORTED_FORMAT:
+				case UNSUPPORTED_FORMAT:
 					consoleOutput(_T("Clipboard change event - Error: Unsupported format"), CONSOLE_SPACE);
 					consoleOutput(uFormat, CONSOLE_NEWLINE);
 					break;
@@ -475,8 +410,7 @@ int Clipslot::createClippieceFromCurrentClipboard()
 		CloseClipboard();			// Luôn luôn đóng clipboard
 
 		// Thêm mô tả
-		clp->setDes(des);
-		clp->setFullDes(desFull);
+		clp->setDesscription();
 
 		return addToClipslot(clp);
 	}

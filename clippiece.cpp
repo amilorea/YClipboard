@@ -8,7 +8,7 @@ Clippiece::Clippiece()
 	status = CLIPPIECE_STATUS_READY_TO_USE;
 	removeButton = NULL;
 	slotButton = NULL;
-	copyButton = NULL;
+	shareButton = NULL;
 }
 
 Clippiece::Clippiece(std::basic_string<wchar_t> des)
@@ -61,9 +61,9 @@ void Clippiece::removeAllButton()
 		DestroyWindow(slotButton);
 		slotButton = NULL;
 	}
-	if (copyButton != NULL) {
-		DestroyWindow(copyButton);
-		copyButton = NULL;
+	if (shareButton != NULL) {
+		DestroyWindow(shareButton);
+		shareButton = NULL;
 	}
 	
 	consoleOutput(_T("Successfully removed buttons"), CONSOLE_NEWLINE);
@@ -167,12 +167,12 @@ HWND Clippiece::getSlotButton()
 
 void Clippiece::setShareButton(HWND button)
 {
-	copyButton = button;
+	shareButton = button;
 }
 
 HWND Clippiece::getShareButton()
 {
-	return copyButton;
+	return shareButton;
 }
 
 bool Clippiece::insertData(UINT format, HGLOBAL handle)
@@ -359,16 +359,54 @@ bool Clippiece::injectAll()
 	return false;
 }
 
-bool setFileDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar_t> &desFull)
+void Clippiece::setDesscription()
 {
-	HANDLE hFileContent = (HANDLE)GetClipboardData(CF_HDROP);
+	bool flag = false;
+	setTimeDescription();
+	if (setFileDescription(flag))
+		flag = true;
+	if (setTextDescription(flag))
+		flag = true;
+	if (setImageDescription(flag))
+		flag = true;
+	if (flag == false)
+		setNoneDescription();
+}
+
+bool Clippiece::setTimeDescription()
+{
+	SYSTEMTIME time;
+	GetLocalTime(&time);
+	des.append(std::to_wstring(time.wHour)).append(_T("h /"));
+	desFull.append(std::to_wstring(time.wHour)).append(_T("h /"));
+	des.append(std::to_wstring(time.wMinute)).append(_T("m /"));
+	desFull.append(std::to_wstring(time.wMinute)).append(_T("m /"));
+	des.append(std::to_wstring(time.wSecond)).append(_T(" s - "));
+	desFull.append(std::to_wstring(time.wSecond)).append(_T(" s - "));
+	des.append(std::to_wstring(time.wDay)).append(_T("/"));
+	desFull.append(std::to_wstring(time.wDay)).append(_T("/"));
+	des.append(std::to_wstring(time.wMonth)).append(_T("/"));
+	desFull.append(std::to_wstring(time.wMonth)).append(_T("/"));
+	des.append(std::to_wstring(time.wYear));
+	desFull.append(std::to_wstring(time.wYear));
+	return true;
+}
+
+bool Clippiece::setFileDescription(bool flag)
+{
+	des.append(_T("\n"));	// Thẩm mỹ: Thêm một lần xuống dòng để phân cách các lần thêm mô tả
+	desFull.append(_T("\n"));
+
+	HANDLE hFileContent = NULL;
 	HDROP hFileLock = NULL;
 	UINT totalFile = 0;
 	bool firstOccur = true;
 	try {
-		if (hFileContent == NULL)
-			throw CLIPBOARD_ERROR_DATA_NOT_FOUND;
+		std::map<UINT, HGLOBAL>::iterator pos = dataMap.find(CF_HDROP);
+		if (pos == dataMap.end())
+			throw CLIPPIECE_ERROR_NO_HANDLE;
 
+		hFileContent = pos->second;
 		hFileLock = (HDROP)GlobalLock(hFileContent);
 		if (hFileLock == NULL)
 			throw GLOBALLOCK_FAILED;
@@ -410,7 +448,7 @@ bool setFileDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar
 	}
 	catch (int error) {
 		switch (error) {
-		case CLIPBOARD_ERROR_DATA_NOT_FOUND:
+		case CLIPPIECE_ERROR_NO_HANDLE:
 			consoleOutput(_T("Clippiece create description by CF_HDROP - Error: Data not found"), CONSOLE_NEWLINE);
 			break;
 		case GLOBALLOCK_FAILED:
@@ -429,28 +467,31 @@ bool setFileDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar
 	return false;
 }
 
-bool setTextDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar_t> &desFull)
+bool Clippiece::setTextDescription(bool flag)
 {
-	if (des.length() > 0)				// Thẩm mỹ: Thêm một lần xuống dòng để phân cách các lần thêm mô tả
+	if (flag)				// Thẩm mỹ: Thêm một lần xuống dòng để phân cách các lần thêm mô tả
 		des.append(_T("\n"));
 
-	if (desFull.length() > 0)
+	if (flag)
 		desFull.append(_T("\n"));
 
 	bool isCF_UNICODETEXTAvailable = true;
-	HANDLE textContent = (HANDLE)GetClipboardData(CF_UNICODETEXT);		// Ưu tiên CF_UNICODETEXT hơn CF_TEXT
-	if (textContent == NULL) {
-		textContent = (HANDLE)GetClipboardData(CF_TEXT);
-		isCF_UNICODETEXTAvailable = false;
-		
-		consoleOutput(_T("CF_UNICODETEXT format not found, fall back to CF_TEXT"), CONSOLE_NEWLINE);
-	}
+	HANDLE textContent = NULL;
 
 	char *buffer = NULL;
 	wchar_t *wbuffer = NULL;
 	try {
-		if (textContent == NULL)
-			throw CLIPBOARD_ERROR_DATA_NOT_FOUND;
+		std::map<UINT, HGLOBAL>::iterator pos = dataMap.find(CF_UNICODETEXT);		// Ưu tiên CF_UNICODETEXT hơn CF_TEXT
+		if (pos == dataMap.end()) {
+			pos = dataMap.find(CF_TEXT);
+			isCF_UNICODETEXTAvailable = false;
+
+			consoleOutput(_T("CF_UNICODETEXT format not found, fall back to CF_TEXT"), CONSOLE_NEWLINE);
+			if (pos == dataMap.end())
+				throw CLIPPIECE_ERROR_NO_HANDLE;
+		}
+
+		textContent = pos->second;
 
 		if (isCF_UNICODETEXTAvailable) {
 			wbuffer = (wchar_t*)GlobalLock(textContent);
@@ -486,7 +527,7 @@ bool setTextDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar
 	}
 	catch (int error) {
 		switch (error) {
-		case CLIPBOARD_ERROR_DATA_NOT_FOUND:
+		case CLIPPIECE_ERROR_NO_HANDLE:
 			consoleOutput(_T("Clippiece create description by CF_TEXT - Error: Data not found"), CONSOLE_NEWLINE);
 			break;
 		case GLOBALLOCK_FAILED:
@@ -500,11 +541,59 @@ bool setTextDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar
 	return false;
 }
 
-bool setNoneDescription(std::basic_string<wchar_t> &des, std::basic_string<wchar_t> &desFull)
+bool Clippiece::setImageDescription(bool flag)
 {
-	if (des.length() == 0)				// Khi tất cả các hàm tạo mô tả khác đều thất bại
-		des.append(_T("Không có bản xem trước"));
-	if (desFull.length() == 0)
-		desFull.append(_T("Không có bản xem trước đầy đủ"));
+	if (flag)				// Thẩm mỹ: Thêm một lần xuống dòng để phân cách các lần thêm mô tả
+		des.append(_T("\n"));
+
+	if (flag)
+		desFull.append(_T("\n"));
+
+	HDC hdcWindow = NULL;
+	HDC hdcMemDC = NULL;
+	HBITMAP hbmScreen = NULL;
+	BITMAP bmpScreen;
+
+	bool isCF_DIBAvailable = true;
+	HANDLE imageContent = NULL;
+
+	try {
+		std::map<UINT, HGLOBAL>::iterator pos = dataMap.find(CF_DIB);
+		if (pos == dataMap.end()) {
+			pos = dataMap.find(CF_DIBV5);
+			isCF_DIBAvailable = false;
+
+			consoleOutput(_T("CF_DIB format not found, fall back to CF_DIBV5"), CONSOLE_NEWLINE);
+			if (pos == dataMap.end())
+				throw CLIPPIECE_ERROR_NO_HANDLE;
+		}
+
+		imageContent = pos->second;
+
+		PBITMAPINFO bitmapInfo = (PBITMAPINFO)imageContent;
+		des.append(_T("Ảnh: ")).append(std::to_wstring(bitmapInfo->bmiHeader.biWidth))
+			.append(_T(" ✕ ")).append(std::to_wstring(bitmapInfo->bmiHeader.biHeight))
+			.append(_T("\r\nDung lượng: ")).append(std::to_wstring(bitmapInfo->bmiHeader.biSizeImage / 1024)).append(_T(" KB"));
+		desFull.append(_T("Ảnh: ")).append(std::to_wstring(bitmapInfo->bmiHeader.biWidth))
+			.append(_T(" ✕ ")).append(std::to_wstring(bitmapInfo->bmiHeader.biHeight))
+			.append(_T("\r\nDung lượng: ")).append(std::to_wstring(bitmapInfo->bmiHeader.biSizeImage / 1024)).append(_T(" KB"));
+
+		return true;
+	}
+	catch (int error) {
+		switch (error) {
+		case CLIPPIECE_ERROR_NO_HANDLE:
+			consoleOutput(_T("Clippiece create description by CF_DIB - Error: Data not found"), CONSOLE_NEWLINE);
+			break;
+		}
+		return false;
+	}
+	return false;
+}
+
+bool Clippiece::setNoneDescription()
+{
+	des.append(_T("Không có bản xem trước"));
+	desFull.append(_T("Không có bản xem trước đầy đủ"));
 	return true;
 }

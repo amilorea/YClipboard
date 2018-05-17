@@ -10,7 +10,6 @@ const int CLIPPIECE_STATUS_READY_TO_DISCARD	= 0x1;
 const int CLIPPIECE_ERROR_NO_HANDLE		= -0x1;
 const int CLIPPIECE_ERROR_NO_FORMAT		= -0x2;
 const int CLIPPIECE_ERROR_INIT_FAILED	= -0x4;
-const int CLIPPIECE_ERROR_UNSUPPORTED_FORMAT = -0x08;
 
 class Clippiece {
 private:
@@ -22,7 +21,13 @@ private:
 
 	HWND removeButton;
 	HWND slotButton;
-	HWND copyButton;
+	HWND shareButton;
+
+	bool setTimeDescription();
+	bool setFileDescription(bool flag);
+	bool setTextDescription(bool flag);
+	bool setImageDescription(bool flag);
+	bool setNoneDescription();
 public:
 	Clippiece();
 	Clippiece(std::basic_string<wchar_t>);
@@ -57,9 +62,6 @@ public:
 	int countFormat();
 	//HGLOBAL getData(UINT);
 	bool injectAll();
-};
 
-bool setFileDescription(std::basic_string<wchar_t>&, std::basic_string<wchar_t>&);
-bool setTextDescription(std::basic_string<wchar_t>&, std::basic_string<wchar_t>&);
-bool setImageDescription(std::basic_string<wchar_t>&, std::basic_string<wchar_t>&);
-bool setNoneDescription(std::basic_string<wchar_t>&, std::basic_string<wchar_t>&);
+	void setDesscription();
+};
