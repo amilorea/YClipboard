@@ -44,20 +44,25 @@ public:
 	~Clippiece();
 	void setDescription();
 	void toggleWait();
-
+	// Các hàm hủy dữ liệu cấp phát động
 	void destroyData();
 	void removeAllButton();
-
+	// Các hàm liên quan tới trạng thái và định danh
 	void setUniqueId(DWORD id);
 	DWORD getUniqueId();
 
 	void setStatus(int status);
 	int getStatus();
 
+	void setPosition(DWORD, bool isAffectHotkey = false);
+	DWORD getPosition();
+
+	DWORD getLogicalPosition();		// Lấy vị trí trên máy khách của clippiece được chia sẻ
+
 	void setSharingStatus(int status);
 	int getSharingStatus();
 	int toggleSharingStatus();
-
+	// Các hàm liên quan tới nút bấm
 	void setRemoveButton(HWND button);
 	HWND getRemoveButton();
 	void removeRemoveButton();
@@ -77,15 +82,11 @@ public:
 	void setDes(std::basic_string<wchar_t>);
 	std::basic_string<wchar_t> getDes();
 
-	void setPosition(DWORD, bool isAffectHotkey = false);
-	DWORD getPosition();
-
+	// Các hàm thao tác dữ liệu
 	bool insertData(UINT format, HGLOBAL data);
 	bool removeData(UINT format);
 	bool isFormatAvailable(UINT format);
 	int countFormat();
-
-	DWORD getLogicalPosition();		// Lấy vị trên máy khách của clippiece được chia sẻ
 
 	bool injectAll();
 	char* collectAll(DWORD* totalSize);

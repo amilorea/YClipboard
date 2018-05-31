@@ -188,6 +188,7 @@ void Network::connectionWrapper(SOCKET mSocket) {
 				while (pClient != NULL) {
 					// Luồng đọc
 					if (FD_ISSET(pClient->getSocket(), &readSet)) {
+						consoleOutput(_T("Waiting for read"), CONSOLE_NEWLINE);
 						pClient->setBufferSize(MAX_BUFFER_LEN);
 						// Đọc dữ liệu
 						int receivedLength = recv(pClient->getSocket(), pClient->getBuffer(), MAX_BUFFER_LEN, 0);
@@ -222,9 +223,11 @@ void Network::connectionWrapper(SOCKET mSocket) {
 							getSharingClippieceData(pClient, position);
 						}
 					}
+					consoleOutput(_T("Out of read"), CONSOLE_NEWLINE);
 
 					// Luồng ghi
 					if (FD_ISSET(pClient->getSocket(), &writeSet)) {
+						consoleOutput(_T("Waiting for write"), CONSOLE_NEWLINE);
 						int sentLength = 0;
 
 						if (0 < (pClient->getTotalByte() - pClient->getSentByte())) {
@@ -257,6 +260,7 @@ void Network::connectionWrapper(SOCKET mSocket) {
 							}
 						}
 					}
+					consoleOutput(_T("Out of write"), CONSOLE_NEWLINE);
 
 					// Luồng lỗi
 					if (FD_ISSET(pClient->getSocket(), &exceptSet)) {

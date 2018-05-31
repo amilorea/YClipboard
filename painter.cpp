@@ -557,7 +557,7 @@ int Painter::getPaintMode() {
 	return paintMode;
 }
 
-bool Painter::addRemoveButton(int selectedSlot) {
+bool Painter::addRemoveButton(DWORD selectedSlot) {
 	try {
 		Clippiece *selectedClippiece = _clipslot.getClippiece(selectedSlot);
 		if (selectedClippiece == NULL
@@ -605,7 +605,7 @@ bool Painter::addRemoveButton(int selectedSlot) {
 		return false;
 	}
 }
-bool Painter::addSlotButton(int selectedSlot) {
+bool Painter::addSlotButton(DWORD selectedSlot) {
 	try {
 		Clippiece *selectedClippiece = _clipslot.getClippiece(selectedSlot);
 		if (selectedClippiece == NULL
@@ -659,7 +659,7 @@ bool Painter::addSlotButton(int selectedSlot) {
 		return false;
 	}
 }
-bool Painter::addShareButton(int selectedSlot) {
+bool Painter::addShareButton(DWORD selectedSlot) {
 	try {
 		Clippiece *selectedClippiece = _clipslot.getClippiece(selectedSlot);
 		if (selectedClippiece == NULL

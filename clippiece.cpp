@@ -506,7 +506,7 @@ char* Clippiece::getSharingDescription(DWORD* size) {
 	return buffer;
 }
 // Cấu trúc: 1: Tổng độ dài của cấu trúc (DWORD) - 2: Cấu trúc con 1 - ...
-// Cấu trúc con: 1.1: Độ dài cấu trúc con - 1.2: Vị trí logic (DWORD) - 1.3: Dữ liệu
+// Cấu trúc con: 1.1: Độ dài cấu trúc con - 1.2: Vị trí logic (UINT) - 1.3: Dữ liệu
 char* Clippiece::collectAll(DWORD* totalSize) {
 	char* buffer = NULL;
 	HGLOBAL hDataLock = NULL;

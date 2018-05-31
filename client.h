@@ -29,8 +29,9 @@ public:
 	void setBufferSize(DWORD length);						// Thiết lập độ dài buffer
 	int setBufferContent(char* data, DWORD dataLength);		// Thiết lập nội dung buffer
 	int setBufferContent(int integer, DWORD dataLength);
-	char* getBuffer();
-	void destroyBuffer();
+	char* getBuffer();				// Lấy nội dung buffer
+	void destroyBuffer();			// Hủy buffer
+
 
 	int getClientMessage();
 

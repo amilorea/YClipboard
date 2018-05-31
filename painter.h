@@ -19,35 +19,36 @@ const int PAINTER_MODE_CHANGESLOT	= 1;	// Chế độ vẽ khi đang trong quá 
 
 class Painter {
 private:
+	// Thông số của các ô clippiece
 	static int clippieceHeight;
 	static int clippieceWidth;
-
+	// Thông số của nút xóa
 	static int removeButtonWidth;
 	static int removeButtonHeight;
 	static int removeButtonMarginTop;
 	static int removeButtonMarginLeft;
-
+	// Thông số của đổi phím tắt
 	static int slotButtonWidth;
 	static int slotButtonHeight;
 	static int slotButtonMarginTop;
 	static int slotButtonMarginLeft;
-
+	// Thông số của nút tải về
 	static int downloadButtonWidth;
 	static int downloadButtonHeight;
 	static int downloadButtonMarginTop;
 	static int downloadButtonMarginLeft;
-
+	// Thông số của nút chia sẻ
 	static int shareButtonWidth;
 	static int shareButtonHeight;
 	static int copyButtonMarginTop;
 	static int copyButtonMarginLeft;
-
+	// Thông số của nút phím tắt
 	static int changeSlotButtonMarginLeft;
 	static int changeSlotButtonMarginTop;
-
+	// Thông số của bản xem trước
 	static int previewMargin;
 	static int clippieceMargin;
-
+	// Thông số của hộp kết nối
 	static int ipBoxHeight;
 	static int ipBoxWidth;
 	static int connectButtonHeight;
@@ -62,6 +63,7 @@ private:
 	int paintMode;
 	int lastMousePosition;
 public:
+	// Kính thước cửa sổ chính
 	static int minWindowWidth;
 	static int minWindowHeight;
 	static int maxWindowWidth;
@@ -94,9 +96,9 @@ public:
 	void setPaintMode(int);
 	int getPaintMode();
 
-	bool addSlotButton(int);
-	bool addRemoveButton(int);
-	bool addShareButton(int);
+	bool addSlotButton(DWORD);
+	bool addRemoveButton(DWORD);
+	bool addShareButton(DWORD);
 	void addDownloadButton();
 
 	int clickEvent(WORD, WORD);
