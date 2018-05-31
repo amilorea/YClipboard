@@ -5,19 +5,19 @@ const int MAX_BUFFER_LEN = 1025;
 
 class Client {
 private:
-	int totalByte;
-	int sentByte;
-	char* streamBuffer;
+	int totalByte;		// Tổng số byte phải gửi
+	int sentByte;		// Tổng số byte đã gửi
+	char* streamBuffer;	// Dữ liệu
 	DWORD streamLength;	// Độ dài của dữ liệu
-	SOCKET socket;
-	Client *next;
+	SOCKET socket;		// Socket của máy khách
+	Client *next;		// Client tiếp theo trong danh sách liên kết
 
 public:
 	Client();
 	~Client();
 
-	void setSocket(SOCKET socket);
-	SOCKET getSocket();
+	void setSocket(SOCKET socket);	// Lấy socket
+	SOCKET getSocket();				// Thiết lập socket
 
 	void setTotalByte(int size);	// Thiết lập số byte nhận
 	int getTotalByte();				// Lấy tổng số byte nhận
@@ -32,9 +32,8 @@ public:
 	char* getBuffer();				// Lấy nội dung buffer
 	void destroyBuffer();			// Hủy buffer
 
+	int getClientMessage();			// Lấy thông điệp của máy khách
 
-	int getClientMessage();
-
-	Client* getNextClient();
-	void setNextClient(Client* client);
+	Client* getNextClient();			// Lấy Client tiếp theo Client này
+	void setNextClient(Client* client);	// Thiết lập Client tiếp theo của Client này
 };

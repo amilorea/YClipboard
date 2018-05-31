@@ -4,13 +4,13 @@
 #include "WindowsProject1.h"
 #include "network.h"
 
-const int PAINTER_ERROR_FAIL_TO_VALIDATE			= 0x1;
-const int PAINTER_ERROR_NONEXIST_SLOT				= 0x2;
+const int PAINTER_ERROR_FAIL_TO_VALIDATE			= 0x1;	// Validate cửa sổ thất bại
+const int PAINTER_ERROR_NONEXIST_SLOT				= 0x2;	// Vị trí Clippiece không tồn tại
 
-const int PAINTER_WARNING_OUT_OF_X					= 0xF1;
-const int PAINTER_WARNING_OUT_OF_Y					= 0xF2;
+const int PAINTER_WARNING_OUT_OF_X					= 0xF1;	// Vượt quá giới hạn ngang của cửa sổ
+const int PAINTER_WARNING_OUT_OF_Y					= 0xF2;	// Vượt quá giới hạn dọc của cửa sổ
 
-const int PAINTER_WARNING_BUTTON_EXISTED			= 0xFF3;
+const int PAINTER_WARNING_BUTTON_EXISTED			= 0xF3;	// Đã có nút bấm này
 
 const int PAINTER_SCROLL_REMAIN_CURRENT_POSITION	= -1;	// Thanh cuộn giữ nguyên vị trí
 
@@ -56,12 +56,12 @@ private:
 	static int connectorMarginTop;
 	static int connectorMarginLeft;
 
-	static HBRUSH unusedClippieceColor;
-	DWORD startPosition;
+	static HBRUSH unusedClippieceColor;	// Màu dành cho các Clippiece bị chờ ghi đè
+	DWORD startPosition;				// Vị trí vẽ
 	DWORD endPosition;
-	int drawingPoint;
-	int paintMode;
-	int lastMousePosition;
+	int drawingPoint;					// Mốc vẽ
+	int paintMode;						// Chế độ vẽ
+	int lastMousePosition;				// Vị trí chuột
 public:
 	// Kính thước cửa sổ chính
 	static int minWindowWidth;
@@ -73,6 +73,7 @@ public:
 	static int windowHeight;
 	static int windowWidth;
 
+	// Font chữ và hình dạng con trỏ chuột
 	static HFONT globalFontArial;
 	static HFONT globalFontArialMedium;
 	static HCURSOR normalCursor;
@@ -96,12 +97,15 @@ public:
 	void setPaintMode(int);
 	int getPaintMode();
 
+	// Tạo ra các nút thay đổi phím nóng / xóa / chia sẻ / tải về
 	bool addSlotButton(DWORD);
 	bool addRemoveButton(DWORD);
 	bool addShareButton(DWORD);
 	void addDownloadButton();
 
+	// Hàm kích hoạt Clippiece bằng chuột
 	int clickEvent(WORD, WORD);
+	// Hàm thay đổi con trỏ dựa trên sự kiện
 	int moveEvent(WORD, WORD);
 
 	static void timedText(Painter *painter, Clippiece *clp);	// Hiển thị chữ trong một thời gian ngắn

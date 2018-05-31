@@ -43,6 +43,7 @@ void Clippiece::setDescription() {
 	if (setImageDescription(flag))	flag = true;
 	if (flag == false)
 		setNoneDescription();
+	des.resize(CLIPPIECE_DESCRIPTION_SIZE);
 }
 bool Clippiece::setTimeDescription() {
 	SYSTEMTIME time;
@@ -62,13 +63,11 @@ bool Clippiece::setFileDescription(bool flag) {
 	HDROP hFileLock = NULL;
 	UINT totalFile = 0;
 
-	bool firstOccur = true;
 	try {
 		std::map<UINT, HGLOBAL>::iterator pos = dataMap.find(CF_HDROP);
 		if (pos == dataMap.end())
 			throw CLIPPIECE_ERROR_NO_FORMAT;
 			
-
 		hFile = pos->second;
 		hFileLock = (HDROP)GlobalLock(hFile);
 		if (hFileLock == NULL)
@@ -80,7 +79,7 @@ bool Clippiece::setFileDescription(bool flag) {
 			throw FORMAT_ERROR_NO_FILE;
 
 		des.append(std::to_wstring(totalFile));
-		des.append(_T(" tệp / thư mục:"));
+		des.append(_T(" tệp / thư mục: "));
 
 		FOR(totalFile) {
 			std::basic_string<wchar_t> fileName;
@@ -88,16 +87,20 @@ bool Clippiece::setFileDescription(bool flag) {
 			fileName.resize(fileNameLength + 1);								// Tính thêm ký tự \0 kết thúc xâu
 			DragQueryFile(hFileLock, cnt, &(fileName[0]), fileNameLength + 1);	// Cú pháp ghi lại tên tệp
 
-			des.append(_T("\n\t"));
-			des.append(fileName.c_str());
-
-			if (firstOccur) {
-				des.append(_T(" "));
-				firstOccur = false;
-			}
-			else des.append(_T(", "));
 			// Bỏ qua đường dẫn phía trước chỉ lấy tên tệp
-			des.append(fileName.substr(fileName.find_last_of('\\') + 1).c_str());
+
+			UINT copyPosition = 0;
+			FOR(fileNameLength)
+				if (fileName[fileNameLength - 1 - cnt] == '\\') {
+					copyPosition = fileNameLength - cnt;
+					break;
+				}
+
+			for (UINT cnt = copyPosition; cnt < fileNameLength; cnt++)
+				des += fileName[cnt];
+
+			if(cnt != totalFile - 1)
+				des.append(_T(", "));
 		}
 		GlobalUnlock(hFileLock);
 

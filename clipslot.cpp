@@ -41,7 +41,7 @@ void Clipslot::setSlotButtonList(HWND button)		{	slotButtonList.push_back(button
 HWND Clipslot::getSlotButton(DWORD selectedButton)	{	return Clipslot::slotButtonList[selectedButton];	}
 
 
-int Clipslot::addToClipslot(Clippiece *addingClippiece, DWORD position) {
+DWORD Clipslot::addToClipslot(Clippiece *addingClippiece, DWORD position) {
 	try {
 		if (addingClippiece->countFormat() <= 0)	// Từ chối nếu không có format nào
 			throw CLIPSLOT_ERROR_EMPTY_CLIPPIECE;
@@ -461,7 +461,7 @@ int Clipslot::createClippieceFromCurrentClipboard() {
 int Clipslot::createClippieceFromSharedDescription(DWORD size, DWORD position, char* content) {
 	try {
 		// Tạo ra mô tả từ dữ liệu cung cấp
-		wchar_t wbuffer[150];	// Lấy dư, kích thước tối đa của phần mô tả chỉ có 100 ký tự wchar_t
+		wchar_t wbuffer[CLIPPIECE_DESCRIPTION_SIZE * 2 + 10];	// Lấy dư
 		memcpy(wbuffer, content, size);
 		wbuffer[size * sizeof(char) / sizeof(wchar_t)] = '\0';
 		std::basic_string<wchar_t> wdes(&wbuffer[0], size * sizeof(char) / sizeof(wchar_t));
@@ -610,6 +610,7 @@ char* Clipslot::collectClippieceDescription(DWORD* totalSize) {
 			mit != sharingMap.end();
 			mit++) {
 			int step = mit->second.first;
+
 
 			memcpy(buffer + iterator, mit->second.second, step);
 			iterator += step;

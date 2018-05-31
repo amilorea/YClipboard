@@ -444,7 +444,7 @@ bool Network::getClippieceDescription() {
 	try {
 		DWORD totalSize;
 		char* storage = getData(&totalSize);
-
+		peeking(storage, totalSize);
 		// Phân giải
 		// Bỏ qua DWORD đầu tiên (chứa kích thước của gói dữ liệu đến)
 		DWORD iterator = sizeof(DWORD);
