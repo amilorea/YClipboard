@@ -30,9 +30,6 @@
     <ClInclude Include="clippiece.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="control.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="clipslot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -54,9 +51,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="clippiece.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="control.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="clipslot.cpp">

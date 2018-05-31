@@ -1,28 +1,38 @@
 ﻿#pragma once
-#include "control.h"
+#include "WindowsProject1.h"
 
-const int CLIPPIECE_DEFAULT_DESCRIPTION_SIZE = 100;
+const int CLIPPIECE_DESCRIPTION_SIZE	= 100;	// Kích thước mô tả
 
-const int CLIPPIECE_NOSLOT					= 0x7FFF - 1;
-const int CLIPPIECE_STATUS_READY_TO_USE		= 0x0;
-const int CLIPPIECE_STATUS_READY_TO_DISCARD	= 0x1;
+const DWORD CLIPPIECE_NOSLOT			= 0x7FFF - 5;	// Vị trí này tương đương với clippiece trống
 
-const int CLIPPIECE_ERROR_NO_HANDLE		= -0x1;
-const int CLIPPIECE_ERROR_NO_FORMAT		= -0x2;
-const int CLIPPIECE_ERROR_INIT_FAILED	= -0x4;
+const int CLIPPIECE_STATUS_READY_TO_USE		= 0x0;	// Sẵn sàng sử dụng
+const int CLIPPIECE_STATUS_READY_TO_DISCARD	= 0x1;	// Chỉ còn giữ chỗ, không sử dụng
+
+const int CLIPPIECE_STATUS_IS_SHARED		= 0x2;	// Dữ liệu được chia sẻ, chưa dùng được
+const int CLIPPIECE_STATUS_IS_SHARING		= 0x3;	// Dữ liệu đang được chia sẻ với máy khách
+const int CLIPPIECE_STATUS_NO_SHARE			= 0x4;	// Dữ liệu không được chia sẻ
+
+const int FORMAT_ERROR_NO_FILE = 0x99;
+
+const int CLIPPIECE_ERROR_INIT_FAILED		= 0xF00;
+const int CLIPPIECE_ERROR_NO_FORMAT			= 0xF01;	// Không tồn tại format này
 
 class Clippiece {
 private:
 	std::map<UINT, HGLOBAL> dataMap;		// Map chứa cặp dữ liệu + format
-	std::basic_string<wchar_t> des;			// Mô tả xem trước
-	std::basic_string<wchar_t> desFull;		// Mô tả đầy đủ
-	int status;								// Tình trạng hiện tại
-	int slotOccupied;
+	std::basic_string<wchar_t> des;			// Mô tả
+	std::basic_string<wchar_t> waiting;		// Dòng thông báo chờ
+	int status;								// Tình trạng khả dụng hiện tại
+	int sharingStatus;						// Tình trạng chia sẻ hiện tại
+	DWORD slotOccupied;			// Vị trí trong kho chứa
+	DWORD uniqueId;				// Id độc nhất
 
-	HWND removeButton;
-	HWND slotButton;
-	HWND shareButton;
+	HWND removeButton;			// Nút xóa
+	HWND slotButton;			// Nút sửa phím tắt
+	HWND shareButton;			// Nút chia sẻ
+	HWND downloadButton;		// Nút tải về
 
+	// Các hàm tạo mô tả
 	bool setTimeDescription();
 	bool setFileDescription(bool flag);
 	bool setTextDescription(bool flag);
@@ -30,38 +40,55 @@ private:
 	bool setNoneDescription();
 public:
 	Clippiece();
-	Clippiece(std::basic_string<wchar_t>);
+	Clippiece(std::basic_string<wchar_t> description);
 	~Clippiece();
+	void setDescription();
+	void toggleWait();
 
 	void destroyData();
 	void removeAllButton();
 
-	void setDes(std::basic_string<wchar_t>);
-	std::basic_string<wchar_t> getDes();
-	void setFullDes(std::basic_string<wchar_t>);
-	std::basic_string<wchar_t> getFullDes();
+	void setUniqueId(DWORD id);
+	DWORD getUniqueId();
 
-	void setPosition(int, bool isAffectHotkey = false);
-	int getPosition();
-
-	void setStatus(int);
+	void setStatus(int status);
 	int getStatus();
 
-	void setRemoveButton(HWND);
+	void setSharingStatus(int status);
+	int getSharingStatus();
+	int toggleSharingStatus();
+
+	void setRemoveButton(HWND button);
 	HWND getRemoveButton();
+	void removeRemoveButton();
 
-	void setSlotButton(HWND);
+	void setSlotButton(HWND button);
 	HWND getSlotButton();
+	void removeSlotButton();
 
-	void setShareButton(HWND);
+	void setShareButton(HWND button);
 	HWND getShareButton();
+	void removeShareButton();
 
-	bool insertData(UINT, HGLOBAL);
-	//void displayData();
-	bool isFormatAvailable(UINT);
+	void setDownloadButton(HWND button);
+	HWND getDownloadButton();
+	void removeDownloadButton();
+
+	void setDes(std::basic_string<wchar_t>);
+	std::basic_string<wchar_t> getDes();
+
+	void setPosition(DWORD, bool isAffectHotkey = false);
+	DWORD getPosition();
+
+	bool insertData(UINT format, HGLOBAL data);
+	bool removeData(UINT format);
+	bool isFormatAvailable(UINT format);
 	int countFormat();
-	//HGLOBAL getData(UINT);
-	bool injectAll();
 
-	void setDesscription();
+	DWORD getLogicalPosition();		// Lấy vị trên máy khách của clippiece được chia sẻ
+
+	bool injectAll();
+	char* collectAll(DWORD* totalSize);
+
+	char* getSharingDescription(DWORD* size);
 };

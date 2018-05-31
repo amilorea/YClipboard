@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "stdafx.h"
 
 const int MAX_BUFFER_LEN = 1025;
@@ -7,29 +7,33 @@ class Client {
 private:
 	int totalByte;
 	int sentByte;
-	SOCKET socket;  // Socket
-	char streamBuffer[MAX_BUFFER_LEN];
+	char* streamBuffer;
+	DWORD streamLength;	// Độ dài của dữ liệu
+	SOCKET socket;
 	Client *next;
 
 public:
 	Client();
 	~Client();
 
-	void setTotalByte(int);
-	int getTotalByte();
-
-	void setSentByte(int);
-	void incrSentByte(int);
-	int getSentByte();
-
-	void setSocket(SOCKET);
+	void setSocket(SOCKET socket);
 	SOCKET getSocket();
 
-	void setBuffer(char*);
-	//void getBuffer(char*);
+	void setTotalByte(int size);	// Thiết lập số byte nhận
+	int getTotalByte();				// Lấy tổng số byte nhận
+
+	void setSentByte(int count);	// Thiết lập số byte gửi
+	void incrSentByte(int count);	// Tăng số byte đã gửi
+	int getSentByte();				// Lấy tổng số byte đã gửi
+
+	void setBufferSize(DWORD length);						// Thiết lập độ dài buffer
+	int setBufferContent(char* data, DWORD dataLength);		// Thiết lập nội dung buffer
+	int setBufferContent(int integer, DWORD dataLength);
 	char* getBuffer();
-	void zeroBuffer();
+	void destroyBuffer();
+
+	int getClientMessage();
 
 	Client* getNextClient();
-	void setNextClient(Client*);
+	void setNextClient(Client* client);
 };

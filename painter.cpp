@@ -2,44 +2,49 @@
 #include "painter.h"
 
 Painter _painter;
-int Painter::minWindowWidth = 290;
-int Painter::maxWindowWidth = 290;
-int Painter::minWindowHeight = 300;
+int Painter::minWindowWidth			= 290;
+int Painter::maxWindowWidth			= 290;
+int Painter::minWindowHeight		= 300;
 
-int Painter::defaultHeight = 600;
-int Painter::defaultWidth = 300;
-int Painter::windowHeight = 0;
-int Painter::windowWidth = 0;
+int Painter::defaultHeight			= 600;
+int Painter::defaultWidth			= 300;
+int Painter::windowHeight			= 0;
+int Painter::windowWidth			= 0;
 
-int Painter::connectorMarginTop = 5;
-int Painter::connectorMarginLeft = 5;
-int Painter::ipBoxHeight = 20;
-int Painter::ipBoxWidth = 190;
-int Painter::connectButtonWidth = 50;
-int Painter::connectButtonHeight = 20;
+int Painter::connectorMarginTop		= 5;
+int Painter::connectorMarginLeft	= 5;
+int Painter::ipBoxHeight			= 20;
+int Painter::ipBoxWidth				= 160;
+int Painter::connectButtonWidth		= 80;
+int Painter::connectButtonHeight	= 20;
 
-int Painter::previewMargin = 5;
-int Painter::clippieceMargin = 5;
-int Painter::clippieceHeight = 70;
-int Painter::clippieceWidth = 230;
+int Painter::previewMargin			= 5;
+int Painter::clippieceMargin		= 5;
+int Painter::clippieceHeight		= 70;
+int Painter::clippieceWidth			= 230;
 
-int Painter::removeButtonWidth = 20;
-int Painter::removeButtonHeight = 20;
-int Painter::removeButtonMarginTop = 3;
+int Painter::removeButtonWidth		= 20;
+int Painter::removeButtonHeight		= 20;
+int Painter::removeButtonMarginTop	= 3;
 int Painter::removeButtonMarginLeft = 220;
 
-int Painter::shareButtonWidth = 45;
-int Painter::shareButtonHeight = 20;
-int Painter::copyButtonMarginTop = 24;
-int Painter::copyButtonMarginLeft = 200;
+int Painter::shareButtonWidth		= 50;
+int Painter::shareButtonHeight		= 20;
+int Painter::copyButtonMarginTop	= 24;
+int Painter::copyButtonMarginLeft	= 200;
 
-int Painter::slotButtonWidth = 45;
-int Painter::slotButtonHeight = 20;
-int Painter::slotButtonMarginTop = 45;
-int Painter::slotButtonMarginLeft = 200;
+int Painter::slotButtonWidth		= 50;
+int Painter::slotButtonHeight		= 20;
+int Painter::slotButtonMarginTop	= 45;
+int Painter::slotButtonMarginLeft	= 200;
+
+int Painter::downloadButtonWidth	= 70;
+int Painter::downloadButtonHeight	= 20;
+int Painter::downloadButtonMarginTop	= 24;
+int Painter::downloadButtonMarginLeft	= 180;
 
 int Painter::changeSlotButtonMarginLeft = 3;
-int Painter::changeSlotButtonMarginTop = 3;
+int Painter::changeSlotButtonMarginTop	= 3;
 
 HBRUSH Painter::unusedClippieceColor = CreateSolidBrush(RGB(255, 220, 220));
 HFONT Painter::globalFontArial = CreateFont(
@@ -75,8 +80,17 @@ HFONT Painter::globalFontArialMedium = CreateFont(
 HCURSOR Painter::normalCursor = LoadCursor(NULL, IDC_ARROW);
 HCURSOR Painter::pointerCursor = LoadCursor(NULL, IDC_HAND);
 
-Painter::Painter()
-{
+void Painter::timedText(Painter *painter, Clippiece *clp) {
+	if (clp != NULL) {
+		clp->toggleWait();
+		painter->redraw();
+		Sleep(1000);
+		clp->toggleWait();
+		painter->redraw();
+	}
+}
+
+Painter::Painter() {
 	startPosition = -1;
 	endPosition = -1;
 	paintMode = PAINTER_MODE_NORMAL;
@@ -90,23 +104,25 @@ Painter::~Painter() {
 void Painter::addSlotButtonList() {
 	std::vector<HWND> tempList;
 	HWND newSlotButton;
-	for (int hotkeySlot = 0; hotkeySlot < MAX_HOTKEY_COUNT; hotkeySlot++) {
+	FOR(MAX_HOTKEY_COUNT) {
 		std::basic_string<wchar_t> buttonDescription;
 		buttonDescription.append(_T("Ctrl "));
-		buttonDescription.push_back('0' + hotkeySlot);
+		buttonDescription.push_back('0' + cnt);
 
 		newSlotButton = CreateWindowEx(
 			0,
 			L"BUTTON",
 			buttonDescription.c_str(),
 			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_CENTER | BS_PUSHBUTTON | BS_MULTILINE,
+			// Cho phép tab đến | Hiện | Là cửa sổ con
+			// Canh giữa | Là nút bấm | Cho phép nội dung nhiều dòng
 			-Painter::slotButtonWidth,
 			-Painter::slotButtonHeight,
 			Painter::slotButtonWidth,
 			Painter::slotButtonHeight,
-			Manager::globalhWnd,
-			(HMENU)hotkeySlot,
-			(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+			Window::globalhWnd,
+			(HMENU)cnt,
+			(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 			NULL);
 
 		SendMessage(newSlotButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
@@ -122,14 +138,13 @@ void Painter::addSlotButtonList() {
 		-Painter::slotButtonHeight,
 		Painter::slotButtonWidth,
 		Painter::slotButtonHeight,
-		Manager::globalhWnd,
+		Window::globalhWnd,
 		(HMENU)MAX_HOTKEY_COUNT,
-		(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+		(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 		NULL);
 	SendMessage(newCancelButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 	_clipslot.setSlotButtonList(newCancelButton);
 }
-
 void Painter::addSocketConnector() {
 	HWND ipBox = CreateWindowEx(
 		0,
@@ -140,16 +155,16 @@ void Painter::addSocketConnector() {
 		Painter::connectorMarginTop,
 		Painter::ipBoxWidth,
 		Painter::ipBoxHeight,
-		Manager::globalhWnd,
-		(HMENU)(0xFF - 3),
-		(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+		Window::globalhWnd,
+		(HMENU)IP_BOX,
+		(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 		NULL);
 	SendMessage(ipBox, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 	SetWindowPos(ipBox,
 		HWND_TOPMOST,
 		0, 0, 0, 0,
 		SWP_NOSIZE | SWP_NOMOVE);
-	Network::ipBoxhWnd = ipBox;
+	_network.setIpBox(ipBox);
 
 	HWND connectButton = CreateWindowEx(
 		0,
@@ -160,36 +175,38 @@ void Painter::addSocketConnector() {
 		Painter::connectorMarginTop,
 		Painter::connectButtonWidth,
 		Painter::connectButtonHeight,
-		Manager::globalhWnd,
-		(HMENU)(0xFF - 1),
-		(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+		Window::globalhWnd,
+		(HMENU)CONNECT_BUTTON,
+		(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 		NULL);
 	SendMessage(connectButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 	SetWindowPos(connectButton,
 		HWND_TOPMOST,
 		0, 0, 0, 0,
 		SWP_NOSIZE | SWP_NOMOVE);
-	Network::connectButtonhWnd = connectButton;
+	_network.setConnectButton(connectButton);
 
 	HWND disconnectButton = CreateWindowEx(
 		0,
 		L"BUTTON",
 		L"Disconnect",
-		WS_OVERLAPPED | WS_BORDER | WS_CHILD,
+		WS_OVERLAPPED | WS_BORDER | WS_CHILD | WS_VISIBLE,
 		Painter::connectorMarginLeft,
 		Painter::connectorMarginTop,
 		Painter::connectButtonWidth,
 		Painter::connectButtonHeight,
-		Manager::globalhWnd,
-		(HMENU)(0xFF - 2),
-		(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+		Window::globalhWnd,
+		(HMENU)DISCONNECT_BUTTON,
+		(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 		NULL);
 	SendMessage(disconnectButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 	SetWindowPos(disconnectButton,
 		HWND_TOPMOST,
 		0, 0, 0, 0,
-		SWP_NOSIZE | SWP_NOMOVE);
-	Network::disconnectButtonhWnd = disconnectButton;
+		NULL);
+	ShowWindow(disconnectButton, SW_HIDE);
+	EnableWindow(disconnectButton, FALSE);
+	_network.setDisconnectButton(disconnectButton);
 
 	consoleOutput(_T("Successfully added ip connector"), CONSOLE_NEWLINE);
 }
@@ -200,7 +217,10 @@ bool Painter::prepare() {
 			throw CLIPSLOT_ERROR_OUT_OF_RANGE;
 
 		// Hủy đi vết từ trạng thái trước đó
-		for (DWORD counter = startPosition; counter < endPosition; counter++) {
+		for (DWORD counter = startPosition;
+			counter < endPosition;
+			counter++) {
+
 			Clippiece *selectedClippiece = _clipslot.getClippiece(counter);
 			if (!(selectedClippiece == NULL
 			|| selectedClippiece->getStatus() == CLIPPIECE_STATUS_READY_TO_DISCARD)) {
@@ -209,8 +229,8 @@ bool Painter::prepare() {
 					-Painter::slotButtonWidth, -Painter::slotButtonHeight,
 					0, 0,
 					SWP_NOSIZE);	// Không vẽ lại phần cửa sổ bị lộ ra khi di chuyển nút
-							// Vì sau này ta vẫn sẽ vẽ đè lên phần không gian đó
-							// và để tránh gọi hàm vẽ lặp
+									// Vì sau này ta vẫn sẽ vẽ đè lên phần không gian đó
+									// và để tránh gọi hàm vẽ lặp
 				SetWindowPos(selectedClippiece->getSlotButton(),
 					HWND_BOTTOM,
 					-Painter::slotButtonWidth, -Painter::slotButtonHeight,
@@ -221,9 +241,15 @@ bool Painter::prepare() {
 					-Painter::shareButtonWidth, -Painter::shareButtonHeight,
 					0, 0,
 					SWP_NOSIZE);
+				SetWindowPos(selectedClippiece->getDownloadButton(),
+					HWND_BOTTOM,
+					-Painter::downloadButtonWidth, -Painter::downloadButtonHeight,
+					0, 0,
+					SWP_NOSIZE);
 			}
 		}
 
+		// Cự ly vẽ
 		DWORD scrollPosition = getVerticalScrollPosition();
 		startPosition = max(
 			0,
@@ -241,6 +267,7 @@ bool Painter::prepare() {
 		DWORD finishPosition = endPosition;
 		Clippiece *selectedClippiece;
 
+		// Tọa độ các nút
 		int removeButtonX = Painter::clippieceMargin + Painter::removeButtonMarginLeft;
 		int removeButtonY = drawingPoint + Painter::removeButtonMarginTop;
 
@@ -249,6 +276,9 @@ bool Painter::prepare() {
 
 		int copyButtonX = Painter::clippieceMargin + Painter::copyButtonMarginLeft;
 		int copyButtonY = drawingPoint + Painter::copyButtonMarginTop;
+
+		int downloadButtonX = Painter::clippieceMargin + Painter::downloadButtonMarginLeft;
+		int downloadButtonY = drawingPoint + Painter::downloadButtonMarginTop;
 
 		int accumulateHeight = 0;
 		// Tạo ra trạng thái mới
@@ -266,25 +296,33 @@ bool Painter::prepare() {
 
 				switch (paintMode) {
 				case PAINTER_MODE_NORMAL: {
-					SetWindowPos(selectedClippiece->getSlotButton(),
-						HWND_BOTTOM,
-						slotButtonX,
-						slotButtonY + accumulateHeight,
-						Painter::slotButtonWidth,
-						Painter::slotButtonHeight,
-						SWP_NOSIZE);
-					SetWindowPos(selectedClippiece->getRemoveButton(),
-						HWND_BOTTOM,
-						removeButtonX,
-						removeButtonY + accumulateHeight,
-						0, 0,
-						SWP_NOSIZE);
-					SetWindowPos(selectedClippiece->getShareButton(),
-						HWND_BOTTOM,
-						copyButtonX,
-						copyButtonY + accumulateHeight,
-						0, 0,
-						SWP_NOSIZE);
+					if(selectedClippiece->getSharingStatus() == CLIPPIECE_STATUS_IS_SHARED)
+						SetWindowPos(selectedClippiece->getDownloadButton(),
+							HWND_BOTTOM,
+							downloadButtonX,
+							downloadButtonY + accumulateHeight,
+							0, 0,
+							SWP_NOSIZE);
+					else {
+						SetWindowPos(selectedClippiece->getSlotButton(),
+							HWND_BOTTOM,
+							slotButtonX,
+							slotButtonY + accumulateHeight,
+							0, 0,
+							SWP_NOSIZE);
+						SetWindowPos(selectedClippiece->getRemoveButton(),
+							HWND_BOTTOM,
+							removeButtonX,
+							removeButtonY + accumulateHeight,
+							0, 0,
+							SWP_NOSIZE);
+						SetWindowPos(selectedClippiece->getShareButton(),
+							HWND_BOTTOM,
+							copyButtonX,
+							copyButtonY + accumulateHeight,
+							0, 0,
+							SWP_NOSIZE);
+					}
 				} break;
 				case PAINTER_MODE_CHANGESLOT: {
 					if (_clipslot.getRequestClippiecePosition() == currentPosition) {
@@ -308,7 +346,7 @@ bool Painter::prepare() {
 							}
 						}
 
-						// Nút xóa
+						// Nút hủy
 						MoveWindow(_clipslot.getSlotButton(MAX_HOTKEY_COUNT),
 							Painter::clippieceMargin + Painter::changeSlotButtonMarginLeft,
 							drawingPoint + changeSlotAccumulateHeight,
@@ -321,8 +359,8 @@ bool Painter::prepare() {
 			catch (int error) {
 				switch (error) {
 				case PAINTER_ERROR_NONEXIST_SLOT:
-					consoleOutput(_T("Painter preparation - Warning: Non-existed clippiece at slot"), CONSOLE_SPACE);
-					consoleOutput(currentPosition, CONSOLE_NEWLINE);
+					//consoleOutput(_T("Painter preparation - Warning: Non-existed clippiece at slot"), CONSOLE_SPACE);
+					//consoleOutput(currentPosition, CONSOLE_NEWLINE);
 					break;
 				}
 			}
@@ -336,16 +374,14 @@ bool Painter::prepare() {
 	catch (int error) {
 		switch (error) {
 		case CLIPSLOT_ERROR_OUT_OF_RANGE:
-			consoleOutput(_T("Painter prepare failed - Error: No clippiece to prepare"), CONSOLE_NEWLINE);
+			consoleOutput(_T("Painter prepare failed - No clippiece to prepare"), CONSOLE_NEWLINE);
 			break;
 		}
 		return false;
 	}
-	return false;
 }
 
-bool Painter::paint(HDC hdc)
-{
+bool Painter::paint(HDC hdc) {
 	try {
 		if (_clipslot.size() == 0)
 			throw CLIPSLOT_ERROR_OUT_OF_RANGE;
@@ -357,20 +393,6 @@ bool Painter::paint(HDC hdc)
 		int accumulateHeight = drawingPoint;
 
 		while (currentPosition < finishPosition) {
-			/*
-			┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-			┃  Preview Content        ┏━━━┓ ┃
-			┃                         ┃ X ┃ ┃
-			┃                         ┗━━━┛ ┃
-			┃                  ┏━━━━━━━━━━┓ ┃
-			┃                  ┃  Hotkey  ┃ ┃
-			┃                  ┗━━━━━━━━━━┛ ┃
-			┃                  ┏━━━━━━━━━━┓ ┃
-			┃                  ┃   Copy   ┃ ┃
-			┃                  ┗━━━━━━━━━━┛ ┃
-			┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-			*/
-
 			/*
 				Lưu ý: Hàm vẽ lặp theo số phần tử mà nó phải vẽ vậy nên nếu gặp phải
 				phần tử không vẽ được (con trỏ NULL hoặc phần tử bị đánh dấu là đã xóa)
@@ -432,49 +454,45 @@ bool Painter::paint(HDC hdc)
 	catch (int error) {
 		switch (error) {
 		case CLIPSLOT_ERROR_OUT_OF_RANGE: {
-			consoleOutput(_T("Painter paint failed - Error: No clippiece to draw"), CONSOLE_NEWLINE);
-			return false;
+			consoleOutput(_T("Painter paint failed - No clippiece to draw"), CONSOLE_NEWLINE);
+			break;
 		}
 		}
+		return false;
 	}
-
-	return true;
 }
 
-void Painter::setVerticalScroll(int newPosition)
-{
-	if (newPosition == PAINTER_SCROLL_REMAIN_CURRENT_POSITION) {
+void Painter::setVerticalScroll(int newPosition) {
+	if (newPosition == PAINTER_SCROLL_REMAIN_CURRENT_POSITION)
 		newPosition = getVerticalScrollPosition();
-	}
 
 	SCROLLINFO verticalScroll;
 	verticalScroll.cbSize = sizeof(verticalScroll);
 	verticalScroll.fMask = SIF_ALL;
 
 	verticalScroll.nMin = 0;
+	// Tính toán lại tổng chiều cao thanh cuộn
 	verticalScroll.nMax = Painter::ipBoxHeight + Painter::connectorMarginTop * 2
 		+ Painter::clippieceHeight * _clipslot.capacity() + Painter::clippieceHeight
 		- Painter::windowHeight;
 	verticalScroll.nPage = Painter::clippieceHeight;
 	verticalScroll.nPos = newPosition;
-	SetScrollInfo(Manager::globalhWnd, SB_VERT, &verticalScroll, TRUE);
+	SetScrollInfo(Window::globalhWnd, SB_VERT, &verticalScroll, TRUE);
 
 	redraw();
 }
 
-int Painter::updateVerticalScrollPosition(WORD scrollEvent, int newPosition)
-{
+int Painter::updateVerticalScrollPosition(WORD scrollEvent, int newPosition) {
 	SCROLLINFO verticalScroll;
 	verticalScroll.cbSize = sizeof(verticalScroll);
 	verticalScroll.fMask = SIF_ALL;
-	GetScrollInfo(Manager::globalhWnd, SB_VERT, &verticalScroll);
+	GetScrollInfo(Window::globalhWnd, SB_VERT, &verticalScroll);
 
 	int currentVerticalPostion = verticalScroll.nPos;
 	int newVerticalPosition = currentVerticalPostion;
 
-	if (newPosition != -1) {
+	if (newPosition != PAINTER_SCROLL_REMAIN_CURRENT_POSITION)
 		newVerticalPosition = newPosition;	// Ghi đè các thay đổi sinh ra từ sự kiện
-	}
 	else {
 		switch (scrollEvent) {
 		case SB_TOP: {			// Nút HOME
@@ -506,28 +524,22 @@ int Painter::updateVerticalScrollPosition(WORD scrollEvent, int newPosition)
 	// Đặt lại vị trí của con lăn và sau đó lấy vị trí mới của nó
 	verticalScroll.fMask = SIF_POS;
 	verticalScroll.nPos = newVerticalPosition;
-	SetScrollInfo(Manager::globalhWnd, SB_VERT, &verticalScroll, TRUE);
-
-//	GetScrollInfo(Manager::globalhWnd, SB_VERT, &verticalScroll);
-//	consoleOutput(_T("New vertical scroll position has been set: "), CONSOLE_NORMAL);
-//	consoleOutput(verticalScroll.nPos, CONSOLE_NEWLINE);
+	SetScrollInfo(Window::globalhWnd, SB_VERT, &verticalScroll, TRUE);
 
 	redraw();
 
 	return newVerticalPosition;
 }
 
-int Painter::getVerticalScrollPosition()
-{
+int Painter::getVerticalScrollPosition() {
 	SCROLLINFO verticalScroll;
 	verticalScroll.cbSize = sizeof(verticalScroll);
 	verticalScroll.fMask = SIF_ALL;
-	GetScrollInfo(Manager::globalhWnd, SB_VERT, &verticalScroll);
+	GetScrollInfo(Window::globalhWnd, SB_VERT, &verticalScroll);
 	return verticalScroll.nPos;
 }
 
-void Painter::setPaintMode(int mode)
-{
+void Painter::setPaintMode(int mode) {
 	switch(paintMode) {
 	case PAINTER_MODE_CHANGESLOT: {
 		for (DWORD selectedSlot = 0; selectedSlot <= MAX_HOTKEY_COUNT; selectedSlot++) {
@@ -541,14 +553,11 @@ void Painter::setPaintMode(int mode)
 
 	paintMode = mode;
 }
-
-int Painter::getPaintMode()
-{
+int Painter::getPaintMode() {
 	return paintMode;
 }
 
-bool Painter::addRemoveButton(int selectedSlot)
-{
+bool Painter::addRemoveButton(int selectedSlot) {
 	try {
 		Clippiece *selectedClippiece = _clipslot.getClippiece(selectedSlot);
 		if (selectedClippiece == NULL
@@ -572,41 +581,31 @@ bool Painter::addRemoveButton(int selectedSlot)
 			-Painter::removeButtonHeight,			// y position 
 			Painter::removeButtonWidth,		// Button width
 			Painter::removeButtonHeight,			// Button height
-			Manager::globalhWnd,     // Parent window
+			Window::globalhWnd,     // Parent window
 			(HMENU)(0xFF + selectedSlot * BUTTON_SKIP_RANGE + REMOVE_BUTTON),
-			(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+			(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 			NULL);
 		SendMessage(newRemoveButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 		SetWindowPos(newRemoveButton, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-		SetWindowPos(Network::ipBoxhWnd,
-			HWND_TOPMOST,
-			0, 0, 0, 0,
-			SWP_NOSIZE | SWP_NOMOVE);
 
 		selectedClippiece->setRemoveButton(newRemoveButton);
-
-		consoleOutput(_T("Successfully added remove button"), CONSOLE_NEWLINE);
 
 		return true;
 	}
 	catch (int error) {
 		switch (error) {
 		case PAINTER_ERROR_NONEXIST_SLOT:
-			consoleOutput(_T("Painter create remove button failed - Error: No clippiece position exist at slot"), CONSOLE_SPACE);
-			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			consoleOutput(_T("Painter create remove button failed - No clippiece position exist at slot"), CONSOLE_SPACE);
 			break;
 		case PAINTER_WARNING_BUTTON_EXISTED:
 			consoleOutput(_T("Painter create remove button failed - Warning: Slot button is already exist at slot"), CONSOLE_SPACE);
-			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
 			break;
 		}
+		consoleOutput(selectedSlot, CONSOLE_NEWLINE);
 		return false;
 	}
-	return false;
 }
-
-bool Painter::addSlotButton(int selectedSlot)
-{
+bool Painter::addSlotButton(int selectedSlot) {
 	try {
 		Clippiece *selectedClippiece = _clipslot.getClippiece(selectedSlot);
 		if (selectedClippiece == NULL
@@ -636,37 +635,31 @@ bool Painter::addSlotButton(int selectedSlot)
 			-Painter::slotButtonHeight,
 			Painter::slotButtonWidth,
 			Painter::slotButtonHeight,
-			Manager::globalhWnd,
+			Window::globalhWnd,
 			(HMENU)(0xFF + selectedSlot * BUTTON_SKIP_RANGE + CHANGE_SLOT_BUTTON),
-			(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+			(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 			NULL);
 		SendMessage(newSlotButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 		SetWindowPos(newSlotButton, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 
 		selectedClippiece->setSlotButton(newSlotButton);
 
-		consoleOutput(_T("Successfully added slot button"), CONSOLE_NEWLINE);
-
 		return true;
 	}
 	catch (int error) {
 		switch (error) {
 		case PAINTER_ERROR_NONEXIST_SLOT:
-			consoleOutput(_T("Painter create slot button failed - Error: No clippiece position exist at slot"), CONSOLE_SPACE);
-			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			consoleOutput(_T("Painter create slot button failed - No clippiece position exist at slot"), CONSOLE_SPACE);
 			break;
 		case PAINTER_WARNING_BUTTON_EXISTED:
 			consoleOutput(_T("Painter create slot button failed - Warning: Slot button is already exist at slot"), CONSOLE_SPACE);
-			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
 			break;
 		}
+		consoleOutput(selectedSlot, CONSOLE_NEWLINE);
 		return false;
 	}
-	return false;
 }
-
-bool Painter::addShareButton(int selectedSlot)
-{
+bool Painter::addShareButton(int selectedSlot) {
 	try {
 		Clippiece *selectedClippiece = _clipslot.getClippiece(selectedSlot);
 		if (selectedClippiece == NULL
@@ -690,57 +683,63 @@ bool Painter::addShareButton(int selectedSlot)
 			-Painter::shareButtonHeight,			// y position 
 			Painter::shareButtonWidth,		// Button width
 			Painter::shareButtonHeight,			// Button height
-			Manager::globalhWnd,     // Parent window
+			Window::globalhWnd,     // Parent window
 			(HMENU)(0xFF + selectedSlot * BUTTON_SKIP_RANGE + SHARE_BUTTON),
-			(HINSTANCE)GetWindowLong(Manager::globalhWnd, GWL_HINSTANCE),
+			(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
 			NULL);
 		SendMessage(newShareButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
 		SetWindowPos(newShareButton, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 
 		selectedClippiece->setShareButton(newShareButton);
 
-		consoleOutput(_T("Successfully added share button"), CONSOLE_NEWLINE);
-
 		return true;
 	}
 	catch (int error) {
 		switch (error) {
 		case PAINTER_ERROR_NONEXIST_SLOT:
-			consoleOutput(_T("Painter create share button failed - Error: No clippiece position exist at slot"), CONSOLE_SPACE);
-			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
+			consoleOutput(_T("Painter create share button failed - No clippiece position exist at slot"), CONSOLE_SPACE);
 			break;
 		case PAINTER_WARNING_BUTTON_EXISTED:
 			consoleOutput(_T("Painter create share button failed - Warning: Copy button is already exist at slot"), CONSOLE_SPACE);
-			consoleOutput(selectedSlot, CONSOLE_NEWLINE);
 			break;
 		}
+		consoleOutput(selectedSlot, CONSOLE_NEWLINE);
 		return false;
 	}
-	return false;
+}
+void Painter::addDownloadButton() {
+	for (DWORD selectedSlot = 0; selectedSlot < _clipslot.capacity(); selectedSlot++) {
+		Clippiece* target = _clipslot.getClippiece(selectedSlot);
+		if (target == NULL)
+			continue;	// Không tồn tại clippiece
+
+		if (target->getSharingStatus() != CLIPPIECE_STATUS_IS_SHARED)
+			continue;	// Clippiece này không phải clippiece được chia sẻ
+
+		if (target->getStatus() == CLIPPIECE_STATUS_READY_TO_DISCARD)
+			continue;	// Clippiece này đang chờ bị ghi đè
+
+		HWND newDownloadButton = CreateWindowEx(
+			0,
+			L"BUTTON",
+			L"Download",
+			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_CENTER | BS_PUSHBUTTON | BS_MULTILINE,
+			-Painter::downloadButtonWidth,
+			-Painter::downloadButtonHeight,
+			Painter::downloadButtonWidth,
+			Painter::downloadButtonHeight,
+			Window::globalhWnd,
+			(HMENU)(0xFF + selectedSlot * BUTTON_SKIP_RANGE + DOWNLOAD_BUTTON),
+			(HINSTANCE)GetWindowLongPtr(Window::globalhWnd, GWLP_HINSTANCE),
+			NULL);
+
+		SendMessage(newDownloadButton, WM_SETFONT, (WPARAM)Painter::globalFontArial, MAKELPARAM(FALSE, 0));
+		target->setDownloadButton(newDownloadButton);
+	}
 }
 
-int Painter::clickEvent(WORD ycor, WORD xcor)
-{
-	try {
-		if (xcor < Painter::clippieceMargin || xcor > (Painter::clippieceMargin + Painter::clippieceWidth))
-			throw PAINTER_WARNING_OUT_OF_X;
-
-		int logicalYCor = ycor - drawingPoint;
-		return logicalYCor / Painter::clippieceHeight + startPosition;
-	}
-	catch (int error) {
-		switch (error) {
-		case PAINTER_WARNING_OUT_OF_X:
-		case PAINTER_WARNING_OUT_OF_Y:
-			break;
-		}
-		return CLIPPIECE_POSITION_UNKNOWN;
-	}
-	return CLIPPIECE_POSITION_UNKNOWN;
-}
-
-int Painter::moveEvent(WORD ycor, WORD xcor)
-{
+// Phân giải vị trí để xác định con trỏ hiển thị
+int Painter::clickEvent(WORD ycor, WORD xcor) {
 	try {
 		if (xcor < Painter::clippieceMargin || xcor >(Painter::clippieceMargin + Painter::clippieceWidth))
 			throw PAINTER_WARNING_OUT_OF_X;
@@ -754,9 +753,25 @@ int Painter::moveEvent(WORD ycor, WORD xcor)
 		case PAINTER_WARNING_OUT_OF_Y:
 			break;
 		}
-		return CLIPPIECE_POSITION_UNKNOWN;
+		return CLIPPIECE_NOSLOT;
 	}
-	return CLIPPIECE_POSITION_UNKNOWN;
+}
+int Painter::moveEvent(WORD ycor, WORD xcor) {
+	try {
+		if (xcor < Painter::clippieceMargin || xcor >(Painter::clippieceMargin + Painter::clippieceWidth))
+			throw PAINTER_WARNING_OUT_OF_X;
+
+		int logicalYCor = ycor - drawingPoint;
+		return logicalYCor / Painter::clippieceHeight + startPosition;
+	}
+	catch (int error) {
+		switch (error) {
+		case PAINTER_WARNING_OUT_OF_X:
+		case PAINTER_WARNING_OUT_OF_Y:
+			break;
+		}
+		return CLIPPIECE_NOSLOT;
+	}
 }
 
 bool Painter::redraw()
@@ -764,15 +779,15 @@ bool Painter::redraw()
 	try {
 		prepare();
 
-		if (!InvalidateRect(Manager::globalhWnd, NULL, true))
+		if (!InvalidateRect(Window::globalhWnd, NULL, true))
 			throw PAINTER_ERROR_FAIL_TO_VALIDATE;
 
-		//UpdateWindow(Manager::globalhWnd);
+		//UpdateWindow(Window::globalhWnd);
 	}
 	catch (int error) {
 		switch (error) {
 		case PAINTER_ERROR_FAIL_TO_VALIDATE:
-			consoleOutput(_T("Resize window - Error: Fail to validate client"), CONSOLE_NEWLINE);
+			consoleOutput(_T("Resize window - Fail to validate client"), CONSOLE_NEWLINE);
 			break;
 		}
 		return false;
